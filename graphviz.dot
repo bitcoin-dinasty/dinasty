@@ -1,0 +1,20 @@
+digraph G {
+    
+    dices -> entropy[label="91 6-sided launches"]
+    entropy -> codex32
+    entropy -> mnemonic
+    codex32 -> seed
+    mnemonic -> seed
+    seed -> xpub
+    xpub -> public_descriptor
+    seed -> xprv
+    xprv -> private_descriptor
+    xprv -> identity
+    xprv -> recipient
+    
+    public_descriptor [style=filled, fillcolor="#ffcccc"] ;
+    xpub [style=filled, fillcolor="#ffcccc"] ;
+    recipient [style=filled, fillcolor="#ffcccc"] ;
+
+}
+
