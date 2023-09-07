@@ -1,3 +1,4 @@
+mod broadcast;
 mod decrypt;
 mod descriptor;
 mod encrypt;
@@ -13,6 +14,7 @@ use std::{net::SocketAddrV4, path::PathBuf};
 
 use age::x25519::Recipient;
 use bitcoin::bip32::DerivationPath;
+pub use broadcast::{broadcast, BroadcastError};
 use clap::{Args, Subcommand};
 pub use decrypt::{decrypt, DecryptError};
 pub use descriptor::descriptor;
@@ -53,7 +55,7 @@ pub enum Commands {
     #[clap(verbatim_doc_comment)]
     Seed {
         /// If specified the output will be encoded in Codex32 (bip93)
-        #[arg(short, long)]
+        #[arg(long)]
         codex32_id: Option<String>,
     },
 
@@ -87,7 +89,7 @@ pub enum Commands {
     #[clap(verbatim_doc_comment)]
     Identity {
         /// If the flag is provided the decryption secret key will be printed
-        #[arg(short, long)]
+        #[arg(long)]
         private: bool,
     },
 
@@ -100,16 +102,16 @@ pub enum Commands {
     /// assert_eq!(stdout, "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)");
     /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --public");
     /// assert_eq!(stdout, "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)");
-    ///
-    /// let stdin = "[01e0b4da/1']tprv8batdt5VSxwNfjjgb9oLoxAHWLbwLaqPACU5uA9aSrCFQGszkzdN3Gc6Np4tvDfrMw4bELAjRpFXaiL4mmLRncYxbvZd8CxGzEbxGZjL9v1";
-    /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --public");
-    /// assert_eq!(stdout,"tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/<0;1>/*)");
     /// ```
     #[clap(verbatim_doc_comment)]
     Descriptor {
         /// If the flag is provided the descriptor will contain extended public keys instead of extended private keys
-        #[arg(short, long)]
+        #[arg(long)]
         public: bool,
+
+        /// If the flag is provided the descriptor will contain only the external addresses derivation (`0/*`)
+        #[arg(long)]
+        only_external: bool,
     },
 
     /// Connects to a local instance of bitcoin core, importing the descriptor given
@@ -121,8 +123,7 @@ pub enum Commands {
     ///
     /// ```
     /// # use dinasty::test_util::*;
-    /// # let (_node, _, core_connect) = setup_node();
-    /// # let core_connect_params = core_connect.sh_params();
+    /// # let TestNode { node, core_connect_params, .. } = setup_node();
     /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name signer --with-private-keys"));
     /// assert!(stdout.contains("success\":true"));
@@ -134,7 +135,7 @@ pub enum Commands {
     /// assert!(stdout.contains("error\":null"));
     /// ```
     ///
-    /// This wallet setup example is used in other doc tests via [`crate::test_util::setup_wallets()`]
+    /// This wallet setup example is used in other doc tests via [`crate::test_util::setup_node_and_wallets()`]
     ///
     #[clap(verbatim_doc_comment)]
     Import {
@@ -155,9 +156,7 @@ pub enum Commands {
     ///
     /// ```
     /// # use dinasty::test_util::*;
-    /// # let (node, node_address, core_connect) = setup_node();
-    /// # let core_connect_params = core_connect.sh_params();
-    /// # let TestWallets { watch_only, signer } = setup_wallets(&node);
+    /// # let TestEnv { node, node_address, core_connect_params, watch_only, signer, .. } = setup_node_and_wallets();
     /// # assert_eq!(node.client.get_blockchain_info().unwrap().blocks, 101);
     /// # let heir_public_descriptor = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/0/*)#04qa3cn0";
     /// let stdout = sh("", &format!("dinasty {core_connect_params} locktime -w watch_only --locktime-future 200 --to-public-descriptor {heir_public_descriptor}"));
@@ -173,11 +172,11 @@ pub enum Commands {
         wallet_name: String,
 
         /// Recipient addresses of the created transactions will be created from this descriptor
-        #[arg(short, long, required = true)]
+        #[arg(long, required = true)]
         to_public_descriptor: String,
 
         /// Default value equals to about 4 years
-        #[arg(short, long, default_value_t = 210_240)]
+        #[arg(long, default_value_t = 210_240)]
         locktime_future: i64,
     },
 
@@ -192,9 +191,7 @@ pub enum Commands {
     ///
     /// ```
     /// # use dinasty::test_util::*;
-    /// # let (node, node_address, core_connect) = setup_node();
-    /// # let core_connect_params = core_connect.sh_params();
-    /// # let TestWallets { watch_only, signer } = setup_wallets(&node);
+    /// # let TestEnv { node, core_connect_params, watch_only, signer, .. } = setup_node_and_wallets();
     /// # assert_eq!(node.client.get_blockchain_info().unwrap().blocks, 101);
     /// let stdout = sh("", &format!("dinasty {core_connect_params} refresh -w watch_only --older-than-blocks 10"));
     /// let signed_psbt = bitcoin::psbt::PartiallySignedTransaction::from_str(&stdout).unwrap();
@@ -212,7 +209,7 @@ pub enum Commands {
         wallet_name: String,
 
         /// Default values equals to about 3 years
-        #[arg(short, long, default_value_t = 157_680)]
+        #[arg(long, default_value_t = 157_680)]
         older_than_blocks: u32,
     },
 
@@ -221,20 +218,20 @@ pub enum Commands {
     ///
     /// ```
     /// # use dinasty::test_util::*;
-    /// # let (node, node_address, core_connect) = setup_node();
-    /// # let core_connect_params = core_connect.sh_params();
-    /// # let TestWallets { watch_only, signer } = setup_wallets(&node);
+    /// # let TestEnv { node, node_address, core_connect_params, watch_only, .. } = setup_node_and_wallets();
     /// # let psbt = watch_only.prepare_psbt_to(&node_address, 10_000).unwrap();
     /// # let mut file = tempfile::NamedTempFile::new().unwrap();
     /// # std::fs::write(&file, psbt).unwrap();
     /// # let psbt_file_path = file.path().display();
     /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} sign -w signer --psbt-file {psbt_file_path}"));
+    /// std::fs::write(&file, &stdout).unwrap();
     /// let signed_psbt = bitcoin::psbt::PartiallySignedTransaction::from_str(&stdout).unwrap();
     /// let tx = signed_psbt.extract_tx();
     /// let result = node.client.test_mempool_accept(&[&tx]).unwrap();
     /// assert!(result[0].allowed);
-    ///
+    /// let stdout = sh("", &format!("dinasty {core_connect_params} broadcast --psbt-file {psbt_file_path}"));
+    /// assert_eq!(stdout, tx.txid().to_string());
     /// ```
     #[clap(verbatim_doc_comment)]
     Sign {
@@ -242,7 +239,17 @@ pub enum Commands {
         wallet_name: String,
 
         /// file containing one psbt in base64 per line
-        #[arg(short, long, required = true)]
+        #[arg(long, required = true)]
+        psbt_file: PathBuf,
+    },
+
+    /// Broadcast the transactions
+    ///
+    /// for an example see `Sign` command
+    #[clap(verbatim_doc_comment)]
+    Broadcast {
+        /// file containing one psbt in base64 per line
+        #[arg(long, required = true)]
         psbt_file: PathBuf,
     },
 

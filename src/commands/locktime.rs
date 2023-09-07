@@ -135,15 +135,18 @@ pub fn locktime(
 
 #[cfg(test)]
 mod test {
+    use crate::{client_ext::ClientExt, commands, test_util::TestNode};
     use bitcoin::Network;
     use bitcoind::bitcoincore_rpc::RpcApi;
 
-    use crate::{client_ext::ClientExt, commands, core_connect::CoreConnect};
-
     #[test]
     fn test_locktime() {
-        let (node, node_address, _) = crate::test_util::setup_node();
-
+        let TestNode {
+            node,
+            node_address,
+            core_connect,
+            ..
+        } = crate::test_util::setup_node();
         let owner_desc = "tr([8335dcdb/48'/1'/0'/2']tprv8ifUoGVh57yDBkyW2sS6kMNv7ewZVLmSLp1RSgZw4H5AhMP6AtxJB1P842vZcvdu9giYEfWDa6NX5nCGaaUVK5boJt1AeA8fFKv2u87Ua3g/<0;1>/*)";
 
         let owner_wo_desc = "tr([8335dcdb/48'/1'/0'/2']tpubDFMWwgXwDVet5E1HvX6h9m32ggTVefxLv7cCjCcEUYsZXqdroHmtMVzzE9RcbwgWa5rCXnZqFXxtKvH7JB5JkTgsNdYdgc1nWJFXHj26ux1/<0;1>/*)";
@@ -151,7 +154,6 @@ mod test {
         let heir_wo_desc = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/0/*)";
         let heir_wo_desc = node.client.add_checksum(heir_wo_desc).unwrap();
 
-        let core_connect = CoreConnect::from((&node.params, Network::Regtest));
         commands::import(&core_connect, owner_wo_desc, "wo", false).unwrap();
         commands::import(&core_connect, owner_desc, "signer", true).unwrap();
 

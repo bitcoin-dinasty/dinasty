@@ -45,3 +45,23 @@ still active.
  UTXO at most once a year which is considered too frequent.
  - using multisg shared by owner and other trusted parties, but this doesn't fulfill well the 
  requirement that only the owner knows about the wallet.
+
+
+
+## How to read test examples
+
+Test examples like [`Seed`](crate::Commands#variant.Seed) are made to look like shell commands, but they are actually rust code.
+The reason for that is that they are executed with the test suite so that they are never wrong
+or outdated.
+In the test we use a rust variable `stdin` which represent the standard input of the shell command.
+The shell command is the second parameter of the rust function `sh()`
+
+Line starting with `#` [are not comments](https://doc.rust-lang.org/rustdoc/write-documentation/documentation-tests.html#hiding-portions-of-the-example) 
+but actual executed code. They are used to hide the elements in rendered documentation, to focus on
+the important lines.
+
+The shell command may contains {variable}, those are replaced with the value of the respective `variable`
+
+
+
+![graph](graphviz.svg)  // TODO embed_doc image?

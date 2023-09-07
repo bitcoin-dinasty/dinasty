@@ -1,4 +1,4 @@
-#![cfg_attr(doc, cfg_attr(all(), doc = include_str!("../README.md")))]
+#![doc = include_str!("../README.md")]
 
 use age::{secrecy::ExposeSecret, x25519::Identity};
 use bitcoin::{psbt::PartiallySignedTransaction, Network};
@@ -52,11 +52,14 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
             commands::import(&core_connect, descriptor, &wallet_name, with_private_keys)?
         }
-        Commands::Descriptor { public } => {
+        Commands::Descriptor {
+            public,
+            only_external,
+        } => {
             let key = stdin.get(0).ok_or(Error::NoKey)?;
             let key = XprvWithSource::from_str(key)?;
 
-            commands::descriptor(key, public)
+            commands::descriptor(key, public, only_external)
         }
         Commands::Refresh {
             wallet_name,
@@ -104,8 +107,23 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
                     .iter()
                     .map(ToString::to_string)
                     .collect();
+
             signed_psbts.join("\n").to_string()
         }
+
+        Commands::Broadcast { psbt_file } => {
+            let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
+
+            let psbt = fs::read_to_string(&psbt_file)?;
+
+            let psbts = psbt
+                .split('\n')
+                .map(|p| PartiallySignedTransaction::from_str(p))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            commands::broadcast(&core_connect, &psbts)?
+        }
+
         Commands::Identity { private } => {
             let key = stdin.get(0).ok_or(Error::NoKey)?;
             let key = XprvWithSource::from_str(key)?;

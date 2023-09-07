@@ -29,6 +29,9 @@ pub enum Error {
     Sign(#[from] commands::SignError),
 
     #[error(transparent)]
+    Broadcast(#[from] commands::BroadcastError),
+
+    #[error(transparent)]
     Encrypt(#[from] commands::EncryptError),
 
     #[error(transparent)]

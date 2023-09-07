@@ -1,20 +1,23 @@
 digraph G {
     
-    dices -> entropy[label="91 6-sided launches"]
-    entropy -> codex32
-    entropy -> mnemonic
-    codex32 -> seed
-    mnemonic -> seed
-    seed -> xpub
-    xpub -> public_descriptor
-    seed -> xprv
-    xprv -> private_descriptor
-    xprv -> identity
-    xprv -> recipient
+    subgraph cluster_0 {
+        style=filled;
+        color=lightgrey;
+        label="seed";
+            dices -> codex32 [label=" seed" fontname="Courier"]
+            dices -> mnemonic
+
+    }
+    codex32 -> xprv [label="xkey m/0h" fontname="Courier"]
+    mnemonic -> xprv
+    xprv -> public_descriptor [label=" descriptor --public" fontname="Courier"]
+    xprv -> private_descriptor [label=" descriptor" fontname="Courier"]
+    xprv -> identity [label=" identity --private" fontname="Courier"]
+    xprv -> recipient [label=" identity" fontname="Courier"]
     
-    public_descriptor [style=filled, fillcolor="#ffcccc"] ;
-    xpub [style=filled, fillcolor="#ffcccc"] ;
-    recipient [style=filled, fillcolor="#ffcccc"] ;
-
+    dices [style=filled, fillcolor="orange"] ;
+    codex32 [style=filled, fillcolor="orange"] ;
+    mnemonic [style=filled, fillcolor="orange"] ;
+    xprv [style=filled, fillcolor="orange"] ;
+    
 }
-

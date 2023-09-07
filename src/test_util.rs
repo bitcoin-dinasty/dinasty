@@ -19,9 +19,16 @@ pub fn sh(stdin: &str, command: &str) -> String {
     inner_main(cli, &stdin).expect(command)
 }
 
+pub struct TestNode {
+    pub node: BitcoinD,
+    pub node_address: Address,
+    pub core_connect: CoreConnect,
+    pub core_connect_params: String,
+}
+
 // TODO return also core connect params, make a struct, make setup_node_and_wallet returning both
 /// Launch a bitcoin core node in regtest mode
-pub fn setup_node() -> (BitcoinD, Address, CoreConnect) {
+pub fn setup_node() -> TestNode {
     let node = bitcoind::BitcoinD::new(bitcoind::exe_path().unwrap()).unwrap();
     let node_address = node
         .client
@@ -29,7 +36,13 @@ pub fn setup_node() -> (BitcoinD, Address, CoreConnect) {
         .unwrap()
         .assume_checked();
     let core_connect = CoreConnect::from((&node, bitcoin::Network::Regtest));
-    (node, node_address, core_connect)
+    let core_connect_params = core_connect.sh_params();
+    TestNode {
+        node,
+        node_address,
+        core_connect,
+        core_connect_params,
+    }
 }
 
 pub struct TestWallets {
@@ -45,7 +58,7 @@ pub struct TestWallets {
 /// Another difference is that the signer key use the private descriptor as passphrase and after
 /// the creation the wallet is locked (will require wallet_passphrase call to unlock)
 ///
-pub fn setup_wallets(node: &BitcoinD) -> TestWallets {
+fn setup_wallets(node: &BitcoinD) -> TestWallets {
     let core_connect: CoreConnect = (node, Network::Regtest).into();
 
     let desc = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)";
@@ -74,4 +87,27 @@ pub fn setup_wallets(node: &BitcoinD) -> TestWallets {
     signer.wallet_lock();
 
     TestWallets { signer, watch_only }
+}
+
+pub struct TestEnv {
+    pub node: BitcoinD,
+    pub node_address: Address,
+    pub core_connect: CoreConnect,
+    pub core_connect_params: String,
+    pub signer: Client,
+    pub watch_only: Client,
+}
+
+pub fn setup_node_and_wallets() -> TestEnv {
+    let node: TestNode = setup_node();
+    let wallets = setup_wallets(&node.node);
+
+    TestEnv {
+        node: node.node,
+        node_address: node.node_address,
+        core_connect: node.core_connect,
+        core_connect_params: node.core_connect_params,
+        signer: wallets.signer,
+        watch_only: wallets.watch_only,
+    }
 }

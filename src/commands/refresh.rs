@@ -87,17 +87,21 @@ mod test {
     use crate::{
         client_ext::ClientExt,
         commands::{self, refresh},
-        core_connect::CoreConnect,
+        test_util::TestNode,
     };
 
     #[test]
     fn test_refresh() {
-        let (node, node_address, _) = crate::test_util::setup_node();
+        let TestNode {
+            node,
+            node_address,
+            core_connect,
+            ..
+        } = crate::test_util::setup_node();
 
         let xprv_desc = "tr([8335dcdb/48'/1'/0'/2']tprv8ifUoGVh57yDBkyW2sS6kMNv7ewZVLmSLp1RSgZw4H5AhMP6AtxJB1P842vZcvdu9giYEfWDa6NX5nCGaaUVK5boJt1AeA8fFKv2u87Ua3g/<0;1>/*)";
         let xpub_desc = "tr([8335dcdb/48'/1'/0'/2']tpubDFMWwgXwDVet5E1HvX6h9m32ggTVefxLv7cCjCcEUYsZXqdroHmtMVzzE9RcbwgWa5rCXnZqFXxtKvH7JB5JkTgsNdYdgc1nWJFXHj26ux1/<0;1>/*)";
 
-        let core_connect = CoreConnect::from((&node.params, Network::Regtest));
         commands::import(&core_connect, xpub_desc, "wo", false).unwrap();
         commands::import(&core_connect, xprv_desc, "signer", true).unwrap();
 

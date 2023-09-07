@@ -16,7 +16,7 @@ pub enum SeedError {
     Bip39(#[from] bip39::Error),
 
     #[error(transparent)]
-    Codex32(#[from] Codex32ErrorWrapper), // wrapping is needed becose codex32::Error doesn't support Display
+    Codex32(#[from] Codex32ErrorWrapper), // wrapping is needed because codex32::Error doesn't support Display
 }
 
 pub fn seed(dices: &str, codex32_id: Option<String>) -> Result<String, SeedError> {

@@ -53,12 +53,9 @@ pub fn explode_descriptor(desc: &str) -> (String, String) {
 
 #[cfg(test)]
 mod test {
-    use bitcoin::Network;
-    use bitcoind::bitcoincore_rpc::RpcApi;
-
-    use crate::{commands, core_connect::CoreConnect};
-
     use super::{explode_descriptor, MULTIPATH};
+    use crate::{commands, test_util::TestNode};
+    use bitcoind::bitcoincore_rpc::RpcApi;
 
     #[test]
     fn test_explode_descriptor() {
@@ -76,11 +73,11 @@ mod test {
 
     #[test]
     fn test_import() {
-        let (node, _, _) = crate::test_util::setup_node();
-
+        let TestNode {
+            node, core_connect, ..
+        } = crate::test_util::setup_node();
         let desc = "tr([8335dcdb/48'/1'/0'/2']tprv8ifUoGVh57yDBkyW2sS6kMNv7ewZVLmSLp1RSgZw4H5AhMP6AtxJB1P842vZcvdu9giYEfWDa6NX5nCGaaUVK5boJt1AeA8fFKv2u87Ua3g/<0;1>/*)";
 
-        let core_connect = CoreConnect::from((&node.params, Network::Regtest));
         let _ = commands::import(&core_connect, desc, "wallet_name", false).unwrap();
 
         assert!(node
