@@ -28,8 +28,10 @@
           };
           rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+          BITCOIND_EXE = pkgs.bitcoind + "/bin/bitcoind"; 
           
-          src = craneLib.cleanCargoSource ./.;
+ #        src = craneLib.cleanCargoSource ./.;
+          src = ./.;
           
           nativeBuildInputs = with pkgs; [ rustToolchain ];
           buildInputs = with pkgs; [ ];
@@ -38,7 +40,10 @@
           };
           cargoArtifacts = craneLib.buildDepsOnly commonArgs;
           bin = craneLib.buildPackage (commonArgs // {
-            inherit cargoArtifacts;
+            inherit cargoArtifacts BITCOIND_EXE;
+            preCheck = ''                                                       
+              export DINASTY_EXE=./target/release/dinasty                           
+            '';    
           });
         in
         with pkgs;

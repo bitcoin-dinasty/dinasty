@@ -11,7 +11,7 @@ fn dinasty(args: Vec<String>, stdin_string: Option<String>) -> Output {
         .as_ref()
         .map(|_| Stdio::piped())
         .unwrap_or(Stdio::null());
-    let exe = "./target/debug/dinasty";
+    let exe = std::env::var("DINASTY_EXE").unwrap_or("./target/debug/dinasty".to_string());
     let mut child = std::process::Command::new(exe)
         .args(args)
         .stdin(stdin)
