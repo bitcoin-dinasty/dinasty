@@ -5,6 +5,7 @@ mod encrypt;
 mod identity;
 mod import;
 mod locktime;
+mod qr;
 mod refresh;
 mod seed;
 mod sign;
@@ -22,6 +23,7 @@ pub use encrypt::{encrypt, EncryptError};
 pub use identity::{identity, IdentityError};
 pub use import::{import, ImportError};
 pub use locktime::{locktime, LocktimeError};
+pub use qr::qr;
 pub use refresh::{refresh, RefreshError};
 pub use seed::{seed, SeedError};
 pub use sign::{sign, SignError};
@@ -292,6 +294,17 @@ pub enum Commands {
     /// ```
     #[clap(verbatim_doc_comment)]
     Decrypt { encrypted_file: PathBuf },
+
+    /// Convert the text content of `file` into a number of QR codes such that every QR code
+    /// encode at max `max_chars`
+    #[clap(verbatim_doc_comment)]
+    Qr {
+        file: PathBuf,
+
+        /// maximum characters per QR code
+        #[arg(long, default_value_t = 300)]
+        max_chars: u16,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -311,7 +324,10 @@ impl Commands {
     pub fn needs_stdin(&self) -> bool {
         !matches!(
             self,
-            Commands::Locktime { .. } | Commands::Refresh { .. } | Commands::Encrypt { .. }
+            Commands::Locktime { .. }
+                | Commands::Refresh { .. }
+                | Commands::Encrypt { .. }
+                | Commands::Qr { .. }
         )
     }
 }

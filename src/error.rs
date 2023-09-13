@@ -46,6 +46,9 @@ pub enum Error {
     #[error(transparent)]
     Cookie(#[from] crate::core_connect::CookieError),
 
+    #[error(transparent)]
+    Qr(#[from] qr_code::types::QrError),
+
     #[error("No mnemonic")]
     NoMnemonicOrCodex32,
 

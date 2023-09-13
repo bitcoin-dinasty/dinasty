@@ -161,6 +161,11 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
             let file_content = std::fs::read_to_string(encrypted_file)?;
             commands::decrypt(&file_content, &identity)?
         }
+        Commands::Qr { file, max_chars } => {
+            let file_content = std::fs::read_to_string(file)?;
+
+            commands::qr(&file_content, max_chars)?
+        }
     })
 }
 
