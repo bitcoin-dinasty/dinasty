@@ -1,17 +1,22 @@
-pub fn qr(content: &str, max_chars: u16) -> Result<String, qr_code::types::QrError> {
-    let splitted_content = content
-        .chars()
-        .collect::<Vec<char>>()
-        .chunks(max_chars as usize)
-        .map(|c| c.iter().collect::<String>())
-        .collect::<Vec<String>>();
-    let mut result = String::new();
+use qr_code::structured::SplittedQr;
 
-    //TODO split qr code with structured append anyway??
-    for piece in splitted_content {
-        let qr = qr_code::QrCode::new(piece.as_bytes())?;
-        result.push_str(&qr.to_string(true, 4));
-        result.push_str("\n\n\n");
+pub fn qr(content: &str, version: i16) -> Result<String, qr_code::types::QrError> {
+    let splitted = SplittedQr::new(content.as_bytes().to_vec(), version)?;
+
+    let mut result = String::new();
+    let splitted = splitted.split()?;
+    let border = 4;
+
+    let len = splitted.len();
+    for (i, qr) in splitted.iter().enumerate() {
+        let number = format!("({}/{len})\n", i + 1);
+        let spaces = " ".repeat((qr.width() + border * 2 - number.len()) / 2);
+
+        result.push_str(&spaces);
+        result.push_str(&number);
+
+        result.push_str(&qr.to_string(true, border as u8));
+        result.push_str("\n\n\n\n");
     }
     Ok(result)
 }

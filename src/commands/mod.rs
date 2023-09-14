@@ -301,9 +301,9 @@ pub enum Commands {
     Qr {
         file: PathBuf,
 
-        /// maximum characters per QR code
-        #[arg(long, default_value_t = 300)]
-        max_chars: u16,
+        /// QR code version
+        #[arg(long, default_value_t = 16)]
+        qr_version: i16,
     },
 }
 
