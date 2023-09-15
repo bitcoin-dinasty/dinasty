@@ -1,22 +1,27 @@
 use qr_code::structured::SplittedQr;
 
-pub fn qr(content: &str, version: i16) -> Result<String, qr_code::types::QrError> {
+pub fn qr(
+    content: &str,
+    version: i16,
+    border: u8,
+    empty_lines: u8,
+) -> Result<String, qr_code::types::QrError> {
     let splitted = SplittedQr::new(content.as_bytes().to_vec(), version)?;
 
     let mut result = String::new();
     let splitted = splitted.split()?;
-    let border = 4;
+    let empty_lines = "\n".repeat(empty_lines as usize);
 
     let len = splitted.len();
     for (i, qr) in splitted.iter().enumerate() {
         let number = format!("({}/{len})\n", i + 1);
-        let spaces = " ".repeat((qr.width() + border * 2 - number.len()) / 2);
+        let spaces = " ".repeat((qr.width() + border as usize * 2 - number.len()) / 2);
 
         result.push_str(&spaces);
         result.push_str(&number);
 
-        result.push_str(&qr.to_string(true, border as u8));
-        result.push_str("\n\n\n\n");
+        result.push_str(&qr.to_string(true, border));
+        result.push_str(&empty_lines);
     }
     Ok(result)
 }

@@ -304,6 +304,14 @@ pub enum Commands {
         /// QR code version
         #[arg(long, default_value_t = 16)]
         qr_version: i16,
+
+        /// Module at the border of the QR code
+        #[arg(long, default_value_t = 4)]
+        border: u8,
+
+        /// Number of empty lines between one QR and the following
+        #[arg(long, default_value_t = 6)]
+        empty_lines: u8,
     },
 }
 
