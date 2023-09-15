@@ -6,7 +6,7 @@ use clap::Parser;
 use commands::{Commands, CoreConnectOptional};
 use error::Error;
 use key_origin::XprvWithSource;
-use std::{fmt::Display, fs, str::FromStr};
+use std::{fmt::Display, fs, path::Path, str::FromStr};
 
 use crate::core_connect::CoreConnect;
 
@@ -161,8 +161,17 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
             let file_content = std::fs::read_to_string(encrypted_file)?;
             commands::decrypt(&file_content, &identity)?
         }
-        Commands::Qr { file, qr_version, border, empty_lines } => {
-            let file_content = std::fs::read_to_string(file)?;
+        Commands::Qr {
+            file,
+            qr_version,
+            border,
+            empty_lines,
+        } => {
+            let file_content = if file == Path::new("-") {
+                stdin.join("\n")
+            } else {
+                std::fs::read_to_string(file)?
+            };
 
             commands::qr(&file_content, qr_version, border, empty_lines)?
         }

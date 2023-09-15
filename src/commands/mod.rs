@@ -11,7 +11,10 @@ mod seed;
 mod sign;
 mod xkey;
 
-use std::{net::SocketAddrV4, path::PathBuf};
+use std::{
+    net::SocketAddrV4,
+    path::{Path, PathBuf},
+};
 
 use age::x25519::Recipient;
 use bitcoin::bip32::DerivationPath;
@@ -330,12 +333,18 @@ pub struct CoreConnectOptional {
 
 impl Commands {
     pub fn needs_stdin(&self) -> bool {
-        !matches!(
-            self,
-            Commands::Locktime { .. }
-                | Commands::Refresh { .. }
-                | Commands::Encrypt { .. }
-                | Commands::Qr { .. }
-        )
+        match self {
+            Commands::Locktime { .. } | Commands::Refresh { .. } | Commands::Encrypt { .. } => {
+                false
+            }
+            Commands::Qr { file, .. } => {
+                if file == Path::new("-") {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => true,
+        }
     }
 }
