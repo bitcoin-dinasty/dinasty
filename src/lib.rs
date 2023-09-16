@@ -2,11 +2,17 @@
 
 use age::{secrecy::ExposeSecret, x25519::Identity};
 use bitcoin::{psbt::PartiallySignedTransaction, Network};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, shells::Bash};
 use commands::{Commands, CoreConnectOptional};
 use error::Error;
 use key_origin::XprvWithSource;
-use std::{fmt::Display, fs, path::Path, str::FromStr};
+use std::{
+    fmt::Display,
+    fs,
+    path::Path,
+    str::{from_utf8, FromStr},
+};
 
 use crate::core_connect::CoreConnect;
 
@@ -174,6 +180,11 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
             };
 
             commands::qr(&file_content, qr_version, border, empty_lines)?
+        }
+        Commands::GenerateCompletion => {
+            let mut result = vec![];
+            generate(Bash, &mut Cli::command(), "dinasty", &mut result);
+            from_utf8(&result).unwrap().to_string()
         }
     })
 }

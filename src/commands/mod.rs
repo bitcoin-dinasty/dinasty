@@ -296,7 +296,9 @@ pub enum Commands {
     /// assert_eq!(plain_text, stdout);
     /// ```
     #[clap(verbatim_doc_comment)]
-    Decrypt { encrypted_file: PathBuf },
+    Decrypt {
+        encrypted_file: PathBuf,
+    },
 
     /// Convert the text content of `file` into a number of QR codes such that every QR code
     /// encode at max `max_chars`
@@ -316,6 +318,9 @@ pub enum Commands {
         #[arg(long, default_value_t = 6)]
         empty_lines: u8,
     },
+
+    #[clap(hide = true)]
+    GenerateCompletion,
 }
 
 #[derive(Debug, Args)]
@@ -334,9 +339,10 @@ pub struct CoreConnectOptional {
 impl Commands {
     pub fn needs_stdin(&self) -> bool {
         match self {
-            Commands::Locktime { .. } | Commands::Refresh { .. } | Commands::Encrypt { .. } => {
-                false
-            }
+            Commands::Locktime { .. }
+            | Commands::Refresh { .. }
+            | Commands::Encrypt { .. }
+            | Commands::GenerateCompletion => false,
             Commands::Qr { file, .. } => {
                 if file == Path::new("-") {
                     true

@@ -33,7 +33,7 @@
  #        src = craneLib.cleanCargoSource ./.;
           src = ./.;
           
-          nativeBuildInputs = with pkgs; [ rustToolchain ];
+          nativeBuildInputs = with pkgs; [ rustToolchain installShellFiles];
           buildInputs = with pkgs; [ ];
           commonArgs = {
             inherit src buildInputs nativeBuildInputs;
@@ -44,6 +44,10 @@
             preCheck = ''                                                       
               export DINASTY_EXE=./target/release/dinasty                           
             '';    
+            postInstall = ''
+              ./target/release/dinasty generate-completion >dinasty.bash
+              installShellCompletion dinasty.bash
+            '';
           });
         in
         with pkgs;
