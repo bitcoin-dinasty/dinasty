@@ -20,6 +20,7 @@ use age::x25519::Recipient;
 use bitcoin::bip32::DerivationPath;
 pub use broadcast::{broadcast, BroadcastError};
 use clap::{Args, Subcommand};
+use clap_complete::Shell;
 pub use decrypt::{decrypt, DecryptError};
 pub use descriptor::descriptor;
 pub use encrypt::{encrypt, EncryptError};
@@ -296,9 +297,7 @@ pub enum Commands {
     /// assert_eq!(plain_text, stdout);
     /// ```
     #[clap(verbatim_doc_comment)]
-    Decrypt {
-        encrypted_file: PathBuf,
-    },
+    Decrypt { encrypted_file: PathBuf },
 
     /// Convert the text content of `file` into a number of QR codes such that every QR code
     /// encode at max `max_chars`
@@ -320,7 +319,7 @@ pub enum Commands {
     },
 
     #[clap(hide = true)]
-    GenerateCompletion,
+    GenerateCompletion { shell: Shell },
 }
 
 #[derive(Debug, Args)]
@@ -342,7 +341,7 @@ impl Commands {
             Commands::Locktime { .. }
             | Commands::Refresh { .. }
             | Commands::Encrypt { .. }
-            | Commands::GenerateCompletion => false,
+            | Commands::GenerateCompletion { .. } => false,
             Commands::Qr { file, .. } => {
                 if file == Path::new("-") {
                     true

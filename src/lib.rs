@@ -3,7 +3,7 @@
 use age::{secrecy::ExposeSecret, x25519::Identity};
 use bitcoin::{psbt::PartiallySignedTransaction, Network};
 use clap::{CommandFactory, Parser};
-use clap_complete::{generate, shells::Bash};
+use clap_complete::generate;
 use commands::{Commands, CoreConnectOptional};
 use error::Error;
 use key_origin::XprvWithSource;
@@ -181,9 +181,9 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
 
             commands::qr(&file_content, qr_version, border, empty_lines)?
         }
-        Commands::GenerateCompletion => {
+        Commands::GenerateCompletion { shell } => {
             let mut result = vec![];
-            generate(Bash, &mut Cli::command(), "dinasty", &mut result);
+            generate(shell, &mut Cli::command(), "dinasty", &mut result);
             from_utf8(&result).unwrap().to_string()
         }
     })

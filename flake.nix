@@ -45,7 +45,7 @@
               export DINASTY_EXE=./target/release/dinasty                           
             '';    
             postInstall = ''
-              ./target/release/dinasty generate-completion >dinasty.bash
+              ./target/release/dinasty generate-completion bash >dinasty.bash
               installShellCompletion dinasty.bash
             '';
           });
