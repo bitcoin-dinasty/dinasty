@@ -326,12 +326,12 @@ pub enum Commands {
 pub struct CoreConnectOptional {
     /// The bitcoin core node url, if not provided defaults to the network default
     /// for example "127.0.0.1:8332" for mainnet
-    #[clap(long)]
+    #[clap(long, env)]
     pub node_socket: Option<SocketAddrV4>,
 
     /// The bitcoin core path of the cookie for authentication, if not provided defaults to the
     /// network defaults, for example "$HOME/.bitcoin/.cookie" for mainnet
-    #[clap(long)]
+    #[clap(long, env)]
     pub node_cookie_path: Option<PathBuf>,
 }
 
