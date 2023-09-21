@@ -1,4 +1,5 @@
 use crate::core_connect::CoreConnect;
+use crate::stdin::StdinData;
 use crate::{commands, inner_main, Cli};
 use bitcoin::{Address, Network};
 use bitcoind::bitcoincore_rpc::Client;
@@ -13,10 +14,10 @@ pub use std::str::FromStr;
 
 /// Emulate the shell by parsing the given command with the clap struct `Cli`.
 pub fn sh(stdin: &str, command: &str) -> String {
-    let stdin: Vec<_> = stdin.split('\n').map(ToString::to_string).collect();
+    let stdin = (!stdin.is_empty()).then(|| StdinData::new(stdin.as_bytes().to_vec()));
 
     let cli = Cli::try_parse_from(command.split(' ')).unwrap();
-    inner_main(cli, &stdin).expect(command)
+    inner_main(cli, stdin).expect(command)
 }
 
 pub struct TestNode {

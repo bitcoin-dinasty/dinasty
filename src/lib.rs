@@ -10,9 +10,11 @@ use key_origin::XprvWithSource;
 use std::{
     fmt::Display,
     fs,
+    io::Read,
     path::Path,
     str::{from_utf8, FromStr},
 };
+use stdin::StdinData;
 
 use crate::core_connect::CoreConnect;
 
@@ -21,6 +23,7 @@ pub mod commands;
 pub mod core_connect;
 pub mod error;
 pub mod key_origin;
+pub mod stdin;
 pub mod test_util; // pub because needed in doctest
 
 #[derive(Parser)]
@@ -38,32 +41,32 @@ pub struct Cli {
     pub core_connect: CoreConnectOptional,
 }
 
-pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
+pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<String, Error> {
     Ok(match cli.command {
         Commands::Seed { codex32_id } => {
-            let dices = stdin.get(0).ok_or(Error::NoDices)?;
+            let dices = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
 
-            commands::seed(dices, codex32_id)?
+            commands::seed(&dices, codex32_id)?
         }
         Commands::Xkey { path } => {
-            let mnemonic_or_codex32 = stdin.iter().next().ok_or(Error::NoMnemonicOrCodex32)?;
+            let mnemonic_or_codex32 = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
 
-            commands::key(mnemonic_or_codex32, &path, cli.network)?
+            commands::key(&mnemonic_or_codex32, &path, cli.network)?
         }
         Commands::Import {
             wallet_name,
             with_private_keys,
         } => {
-            let descriptor = stdin.get(0).ok_or(Error::NoDescriptor)?;
+            let descriptor = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
-            commands::import(&core_connect, descriptor, &wallet_name, with_private_keys)?
+            commands::import(&core_connect, &descriptor, &wallet_name, with_private_keys)?
         }
         Commands::Descriptor {
             public,
             only_external,
         } => {
-            let key = stdin.get(0).ok_or(Error::NoKey)?;
-            let key = XprvWithSource::from_str(key)?;
+            let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
+            let key = XprvWithSource::from_str(&key)?;
 
             commands::descriptor(key, public, only_external)
         }
@@ -98,7 +101,7 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
             wallet_name,
             psbt_file,
         } => {
-            let descriptor = stdin.get(0).ok_or(Error::NoDescriptor)?;
+            let descriptor = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
 
             let psbt = fs::read_to_string(&psbt_file)?;
 
@@ -131,8 +134,8 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
         }
 
         Commands::Identity { private } => {
-            let key = stdin.get(0).ok_or(Error::NoKey)?;
-            let key = XprvWithSource::from_str(key)?;
+            let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
+            let key = XprvWithSource::from_str(&key)?;
 
             let identity = commands::identity(&key, cli.network)?;
             if private {
@@ -142,17 +145,17 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
             }
         }
         Commands::Encrypt { recipients } => {
-            let plain_text = stdin.join("\n");
+            let plain_text = stdin.ok_or(Error::StdinExpected)?.to_vec();
 
             let armored_cipher_text = commands::encrypt(&plain_text, recipients)?;
             armored_cipher_text.to_string()
         }
         Commands::Decrypt { encrypted_file } => {
-            let str = stdin.get(0).ok_or(Error::NoIdentityOrKey)?;
-            let identity = Identity::from_str(str);
+            let str = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
+            let identity = Identity::from_str(&str);
             let identity = match identity {
                 Ok(identity) => identity,
-                Err(id_e) => match XprvWithSource::from_str(str) {
+                Err(id_e) => match XprvWithSource::from_str(&str) {
                     Ok(xprv) => commands::identity(&xprv, cli.network)?,
                     Err(xprv_e) => {
                         return Err(Error::DecryptError {
@@ -172,19 +175,45 @@ pub fn inner_main(cli: Cli, stdin: &[String]) -> Result<String, Error> {
             qr_version,
             border,
             empty_lines,
+            avoid_structured,
         } => {
             let file_content = if file == Path::new("-") {
-                stdin.join("\n")
+                stdin.ok_or(Error::StdinExpected)?.to_string()?
             } else {
                 std::fs::read_to_string(file)?
             };
 
-            commands::qr(&file_content, qr_version, border, empty_lines)?
+            commands::qr(
+                &file_content,
+                qr_version,
+                border,
+                empty_lines,
+                avoid_structured,
+            )?
+        }
+        Commands::Bech32 {
+            file,
+            lowercase,
+            hrp,
+            with_checksum,
+        } => {
+            let file_content = if file == Path::new("-") {
+                stdin.ok_or(Error::StdinExpected)?.to_vec()
+            } else {
+                let mut buffer = vec![];
+                let mut file = fs::File::open(file)?;
+                file.read_to_end(&mut buffer)?;
+                buffer
+            };
+            let hrp = hrp.unwrap_or("data".to_string());
+            commands::bech32(&hrp, &file_content, lowercase, with_checksum)?
         }
         Commands::GenerateCompletion { shell } => {
             let mut result = vec![];
             generate(shell, &mut Cli::command(), "dinasty", &mut result);
-            from_utf8(&result).unwrap().to_string()
+            from_utf8(&result)
+                .expect("generate completion non utf8 chars")
+                .to_string()
         }
     })
 }

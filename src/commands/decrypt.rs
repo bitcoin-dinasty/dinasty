@@ -55,7 +55,7 @@ mod test {
     fn roundtrip() {
         let identity = mock_identity();
         let data = "ciao mamma";
-        let encrypted = encrypt(data, vec![identity.to_public()]).unwrap();
+        let encrypted = encrypt(data.as_bytes(), vec![identity.to_public()]).unwrap();
         assert_eq!(
             "-----BEGIN AGE ENCRYPTED FILE-----",
             encrypted.lines().next().unwrap()

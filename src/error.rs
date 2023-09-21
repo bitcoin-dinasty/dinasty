@@ -49,20 +49,14 @@ pub enum Error {
     #[error(transparent)]
     Qr(#[from] qr_code::types::QrError),
 
-    #[error("No mnemonic")]
-    NoMnemonicOrCodex32,
+    #[error(transparent)]
+    Stdin(#[from] crate::stdin::StdinError),
 
-    #[error("No key")]
-    NoKey,
+    #[error(transparent)]
+    Bech32(#[from] bech32::Error),
 
-    #[error("No descriptor")]
-    NoDescriptor,
-
-    #[error("No dices")]
-    NoDices,
-
-    #[error("No identity or key provided")]
-    NoIdentityOrKey,
+    #[error("Stdin is expected for this command")]
+    StdinExpected,
 
     #[error("Decrypt error, cannot parse \"{input}\" neither age identity \"{identity_parse_err}\" nor xprv \"{xprv_parse_err}\"")]
     DecryptError {

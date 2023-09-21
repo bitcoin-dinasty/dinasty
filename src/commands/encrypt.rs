@@ -20,7 +20,7 @@ pub enum EncryptError {
     NoRecipients,
 }
 
-pub fn encrypt(plain_text: &str, recipients: Vec<Recipient>) -> Result<String, EncryptError> {
+pub fn encrypt(plain_text: &[u8], recipients: Vec<Recipient>) -> Result<String, EncryptError> {
     let recipients: Vec<_> = recipients
         .into_iter()
         .map(|r| Box::new(r) as Box<dyn age::Recipient + Send>)
@@ -33,7 +33,7 @@ pub fn encrypt(plain_text: &str, recipients: Vec<Recipient>) -> Result<String, E
     let mut armored_writer = ArmoredWriter::wrap_output(&mut result, Format::AsciiArmor)?;
 
     let mut encryption_writer = encryptor.wrap_output(&mut armored_writer)?;
-    encryption_writer.write_all(plain_text.as_bytes())?;
+    encryption_writer.write_all(plain_text)?;
     encryption_writer.finish()?;
     armored_writer.finish()?;
 

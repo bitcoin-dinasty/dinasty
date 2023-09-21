@@ -76,16 +76,18 @@ Needed executables: `bitcoind`, `gpg`, `dinasty`, `pass`, `age`
 
 M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/A/gpg-passphrase 24`
 M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/B/gpg-passphrase 24`
-M) `gpg --export key`
+M) `gpg --export --export-options export-minimal <gpg-id> | base64`  # armor is not suitable for barcode reading
+A,B) loadkeys it/us to switch keyboard mapping, gpg--import
 
 A,B) import gpg public key of M DEADBEEM
 A) `gpg --full-generate-key` use machine/A/gpg-passphrase -> eg DEADBEE1
 B) `gpg --full-generate-key` use machine/B/gpg-passphrase -> eg DEADBEE2
 
 A,B) `alias decrypt='gpg --decrypt'`
-A) `alias encrypt='gpg --encrypt DEADBEE1 --armor'` 
-B) `alias encrypt='gpg --encrypt DEADBEE2 --armor'`
+A) `alias encrypt='gpg --armor --encrypt -r DEADBEE1'` 
+B) `alias encrypt='gpg --armor --encrypt -r DEADBEE2'`
 A,B) `alias encrypt_to_online='gpg --encrypt DEADBEEM --armor'`
+`alias qr=dinasty qr`
 
 
 A,B) `dinasty seed` with the value from examples and check result match
@@ -121,7 +123,4 @@ A,B) `alias encrypt_to_heir='age --encrypt -r ${cat heir_identity_public}'`
 M) `dinasty locktime -w watch_only --locktime-future 200000 --to-public-descriptor ${cat heir_descriptor_external_public} >locktime_to_be_signed` bring to A
 
 A) `decrypt owner_descriptor | dinasty sign -w signer --psbt-file locktime_to_be_signed | cat - ${decrypt heir_descriptor} | encrypt_to_heir >locktime_presigned_with_descriptor` bring to M, email to heir
-
-
-
 

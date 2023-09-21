@@ -1,3 +1,4 @@
+mod bech32;
 mod broadcast;
 mod decrypt;
 mod descriptor;
@@ -11,16 +12,14 @@ mod seed;
 mod sign;
 mod xkey;
 
-use std::{
-    net::SocketAddrV4,
-    path::{Path, PathBuf},
-};
-
 use age::x25519::Recipient;
 use bitcoin::bip32::DerivationPath;
-pub use broadcast::{broadcast, BroadcastError};
 use clap::{Args, Subcommand};
 use clap_complete::Shell;
+use std::{net::SocketAddrV4, path::PathBuf};
+
+pub use crate::commands::bech32::bech32;
+pub use broadcast::{broadcast, BroadcastError};
 pub use decrypt::{decrypt, DecryptError};
 pub use descriptor::descriptor;
 pub use encrypt::{encrypt, EncryptError};
@@ -65,8 +64,7 @@ pub enum Commands {
         codex32_id: Option<String>,
     },
 
-    /// Given a mnemonic from standard input, prints the extended private key
-    /// derived at the given path
+    /// Given a mnemonic from stdin, prints the xprv derived at the given path
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -120,8 +118,7 @@ pub enum Commands {
         only_external: bool,
     },
 
-    /// Connects to a local instance of bitcoin core, importing the descriptor given
-    /// from standard input.
+    /// Connects to bitcoin core, importing the descriptor given from stdin.
     ///
     /// If the descriptor contains extended PRIVATE keys, the flag `--with-private-keys` must be used
     ///
@@ -219,8 +216,7 @@ pub enum Commands {
         older_than_blocks: u32,
     },
 
-    /// Connects to a local instance of bitcoin core and signs the psbts given in standard input
-    /// printing it back as QR code
+    /// Connects to bitcoin core and signs the psbts given in stdin
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -259,7 +255,9 @@ pub enum Commands {
         psbt_file: PathBuf,
     },
 
-    /// Encrypt standard input for given recipients
+    /// Encrypt standard input for given recipients using the age protocol
+    ///
+    /// The output is binary encoded in bech32m uppercased string
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -281,6 +279,8 @@ pub enum Commands {
 
     /// Using an identity or key provided from standard input, decrypt the content of the encrypted_file
     ///
+    /// Decrypts only plain text which are valid utf8 strings.
+    ///
     /// ```
     /// # use dinasty::test_util::*;
     /// # let plain_text = "plain text";
@@ -297,15 +297,19 @@ pub enum Commands {
     /// assert_eq!(plain_text, stdout);
     /// ```
     #[clap(verbatim_doc_comment)]
-    Decrypt { encrypted_file: PathBuf },
+    Decrypt {
+        /// The file to be decrypted in QR code, "-" it is NOT supported (as stdin is used for the key)
+        encrypted_file: PathBuf,
+    },
 
-    /// Convert the text content of `file` into a number of QR codes such that every QR code
-    /// encode at max `max_chars`
+    /// Convert the text content of given file or stdin into 1 or more QR codes
     #[clap(verbatim_doc_comment)]
     Qr {
+        /// The file to be converted in QR code, "-" is supported to indicate to use stdin
         file: PathBuf,
 
-        /// QR code version
+        /// QR code version to be used, this is best-estimate, result version could be slightly
+        /// different, adjust accordingly
         #[arg(long, default_value_t = 16)]
         qr_version: i16,
 
@@ -316,6 +320,31 @@ pub enum Commands {
         /// Number of empty lines between one QR and the following
         #[arg(long, default_value_t = 6)]
         empty_lines: u8,
+
+        /// Avoid structured encoding, the standard way to split data into multiple QR codes.
+        /// Instead simply split the data so that it presumably fits the qr_version given
+        #[arg(long)]
+        avoid_structured: bool,
+    },
+
+    /// Convert the given file into NON-checksummed bech32 encoded string (uppercase by default)
+    ///
+    /// In QR-codes uppercase bech32 is about 20% more efficient than base64
+    Bech32 {
+        /// The file to be converted in QR code, "-" is is supported to indicate to use stdin
+        file: PathBuf,
+
+        /// Print the encoding lower case
+        #[arg(long)]
+        lowercase: bool,
+
+        /// The human readable part preceding the encoding "DATA" if nothing is specified
+        #[arg(long)]
+        hrp: Option<String>,
+
+        /// Add a bech32m checksum
+        #[arg(long)]
+        with_checksum: bool,
     },
 
     #[clap(hide = true)]
@@ -333,23 +362,4 @@ pub struct CoreConnectOptional {
     /// network defaults, for example "$HOME/.bitcoin/.cookie" for mainnet
     #[clap(long, env)]
     pub node_cookie_path: Option<PathBuf>,
-}
-
-impl Commands {
-    pub fn needs_stdin(&self) -> bool {
-        match self {
-            Commands::Locktime { .. }
-            | Commands::Refresh { .. }
-            | Commands::Encrypt { .. }
-            | Commands::GenerateCompletion { .. } => false,
-            Commands::Qr { file, .. } => {
-                if file == Path::new("-") {
-                    true
-                } else {
-                    false
-                }
-            }
-            _ => true,
-        }
-    }
 }
