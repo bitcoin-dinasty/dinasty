@@ -1,4 +1,4 @@
-use std::{io::Read, path::Path};
+use std::io::Read;
 
 use crate::commands::Commands;
 
@@ -53,8 +53,6 @@ impl Commands {
             | Commands::Refresh { .. }
             | Commands::Encrypt { .. }
             | Commands::GenerateCompletion { .. } => false,
-            Commands::Qr { file, .. } => file == Path::new("-"),
-            Commands::Bech32 { file, .. } => file == Path::new("-"),
             _ => true,
         }
     }

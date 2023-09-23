@@ -1,3 +1,5 @@
+use std::io::{stdout, Write};
+
 use clap::Parser;
 use dinasty::{inner_main, stdin::read_stdin, Cli};
 
@@ -8,7 +10,7 @@ fn main() {
     let cli = Cli::parse();
     let stdin = cli.command.needs_stdin().then(|| read_stdin());
     match inner_main(cli, stdin) {
-        Ok(r) => println!("{r}"),
+        Ok(r) => stdout().write_all(&r).expect("fail to write to stdout"),
         Err(e) => eprintln!("{e}"),
     }
 }

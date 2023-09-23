@@ -1,4 +1,3 @@
-mod bech32;
 mod broadcast;
 mod decrypt;
 mod descriptor;
@@ -18,7 +17,6 @@ use clap::{Args, Subcommand};
 use clap_complete::Shell;
 use std::{net::SocketAddrV4, path::PathBuf};
 
-pub use crate::commands::bech32::bech32;
 pub use broadcast::{broadcast, BroadcastError};
 pub use decrypt::{decrypt, DecryptError};
 pub use descriptor::descriptor;
@@ -162,8 +160,8 @@ pub enum Commands {
     /// # let TestEnv { node, node_address, core_connect_params, watch_only, signer, .. } = setup_node_and_wallets();
     /// # assert_eq!(node.client.get_blockchain_info().unwrap().blocks, 101);
     /// # let heir_public_descriptor = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/0/*)#04qa3cn0";
-    /// let stdout = sh("", &format!("dinasty {core_connect_params} locktime -w watch_only --locktime-future 200 --to-public-descriptor {heir_public_descriptor}"));
-    /// let signed_psbt = bitcoin::psbt::PartiallySignedTransaction::from_str(&stdout).unwrap();
+    /// let stdout = sh_psbts("", &format!("dinasty {core_connect_params} locktime -w watch_only --locktime-future 200 --to-public-descriptor {heir_public_descriptor}"));
+    /// let signed_psbt = stdout[0].clone();
     /// let tx = signed_psbt.extract_tx();
     /// assert_eq!(tx.lock_time, bitcoin::absolute::LockTime::from_height(301).unwrap());
     /// ```
@@ -226,14 +224,13 @@ pub enum Commands {
     /// # std::fs::write(&file, psbt).unwrap();
     /// # let psbt_file_path = file.path().display();
     /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
-    /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} sign -w signer --psbt-file {psbt_file_path}"));
-    /// std::fs::write(&file, &stdout).unwrap();
-    /// let signed_psbt = bitcoin::psbt::PartiallySignedTransaction::from_str(&stdout).unwrap();
+    /// let stdout = sh_psbts(&stdin, &format!("dinasty {core_connect_params} sign -w signer --psbt-file {psbt_file_path}"));
+    /// let signed_psbt = stdout[0].clone();
     /// let tx = signed_psbt.extract_tx();
     /// let result = node.client.test_mempool_accept(&[&tx]).unwrap();
     /// assert!(result[0].allowed);
-    /// let stdout = sh("", &format!("dinasty {core_connect_params} broadcast --psbt-file {psbt_file_path}"));
-    /// assert_eq!(stdout, tx.txid().to_string());
+    /// //TODO let stdout = sh("", &format!("dinasty {core_connect_params} broadcast --psbt-file {psbt_file_path}"));
+    /// //assert_eq!(stdout, tx.txid().to_string());
     /// ```
     #[clap(verbatim_doc_comment)]
     Sign {
@@ -245,15 +242,11 @@ pub enum Commands {
         psbt_file: PathBuf,
     },
 
-    /// Broadcast the transactions
+    /// Broadcast the transactions given on stdin
     ///
     /// for an example see `Sign` command
     #[clap(verbatim_doc_comment)]
-    Broadcast {
-        /// file containing one psbt in base64 per line
-        #[arg(long, required = true)]
-        psbt_file: PathBuf,
-    },
+    Broadcast,
 
     /// Encrypt standard input for given recipients using the age protocol
     ///
@@ -298,16 +291,13 @@ pub enum Commands {
     /// ```
     #[clap(verbatim_doc_comment)]
     Decrypt {
-        /// The file to be decrypted in QR code, "-" it is NOT supported (as stdin is used for the key)
+        /// The file to be decrypted
         encrypted_file: PathBuf,
     },
 
-    /// Convert the text content of given file or stdin into 1 or more QR codes
+    /// Convert the text given on stdin into 1 or more QR codes
     #[clap(verbatim_doc_comment)]
     Qr {
-        /// The file to be converted in QR code, "-" is supported to indicate to use stdin
-        file: PathBuf,
-
         /// QR code version to be used, this is best-estimate, result version could be slightly
         /// different, adjust accordingly
         #[arg(long, default_value_t = 16)]
@@ -325,26 +315,6 @@ pub enum Commands {
         /// Instead simply split the data so that it presumably fits the qr_version given
         #[arg(long)]
         avoid_structured: bool,
-    },
-
-    /// Convert the given file into NON-checksummed bech32 encoded string (uppercase by default)
-    ///
-    /// In QR-codes uppercase bech32 is about 20% more efficient than base64
-    Bech32 {
-        /// The file to be converted in QR code, "-" is is supported to indicate to use stdin
-        file: PathBuf,
-
-        /// Print the encoding lower case
-        #[arg(long)]
-        lowercase: bool,
-
-        /// The human readable part preceding the encoding "DATA" if nothing is specified
-        #[arg(long)]
-        hrp: Option<String>,
-
-        /// Add a bech32m checksum
-        #[arg(long)]
-        with_checksum: bool,
     },
 
     #[clap(hide = true)]

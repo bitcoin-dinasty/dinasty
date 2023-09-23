@@ -1,6 +1,7 @@
 use crate::core_connect::CoreConnect;
 use crate::stdin::StdinData;
-use crate::{commands, inner_main, Cli};
+use crate::{commands, inner_main, psbts_serde, Cli};
+use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::{Address, Network};
 use bitcoind::bitcoincore_rpc::Client;
 use bitcoind::BitcoinD;
@@ -12,12 +13,23 @@ pub use bitcoind::bitcoincore_rpc::RpcApi;
 pub use std::io::Write;
 pub use std::str::FromStr;
 
-/// Emulate the shell by parsing the given command with the clap struct `Cli`.
-pub fn sh(stdin: &str, command: &str) -> String {
+fn inner_sh(stdin: &str, command: &str) -> Vec<u8> {
     let stdin = (!stdin.is_empty()).then(|| StdinData::new(stdin.as_bytes().to_vec()));
 
     let cli = Cli::try_parse_from(command.split(' ')).unwrap();
     inner_main(cli, stdin).expect(command)
+}
+
+/// Emulate the shell by parsing the given command with the clap struct `Cli`
+pub fn sh(stdin: &str, command: &str) -> String {
+    let bytes = inner_sh(stdin, command);
+    String::from_utf8(bytes).expect("Invalid utf8")
+}
+
+// Emulate the shell by parsing the given command with the clap struct `Cli`, parse result as PSBTs
+pub fn sh_psbts(stdin: &str, command: &str) -> Vec<PartiallySignedTransaction> {
+    let bytes = inner_sh(stdin, command);
+    psbts_serde::deserialize(&bytes).expect("Invalid PSBTs")
 }
 
 pub struct TestNode {

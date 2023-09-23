@@ -29,7 +29,11 @@
               wireless.enable = false;
               useDHCP = false;
             };
-            environment.systemPackages = [ pkgs.git pkgs.bitcoin pkgs.gnupg pkgs.pass pkgs.age pkgs.htop dinasty-pkg.dinasty ];
+            environment.systemPackages = with pkgs; [ git bitcoin gnupg pass age htop ] ++ [dinasty-pkg.dinasty];
+            programs.gnupg.agent = {
+              enable = true;
+              pinentryFlavor = "curses";
+            };
           };
         })
       ];
