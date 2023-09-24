@@ -192,6 +192,26 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
             generate(shell, &mut Cli::command(), "dinasty", &mut result);
             result
         }
+        Commands::Convert { inverted } => {
+            if inverted {
+                let content = stdin.ok_or(Error::StdinExpected)?.to_multiline_string()?;
+                let psbts: Result<Vec<_>, _> = content.iter().map(|e| e.parse()).collect();
+                psbts_serde::serialize(&psbts?)
+            } else {
+                let content = stdin.ok_or(Error::StdinExpected)?.to_vec();
+                let psbts = psbts_serde::deserialize(&content)?;
+                psbts
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .as_bytes()
+                    .to_vec()
+            }
+        }
+        Commands::Balance {
+            public_descriptor: _,
+        } => todo!(),
     })
 }
 

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::commands;
+use crate::{commands, psbts_serde};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -64,6 +64,9 @@ pub enum Error {
         identity_parse_err: String,
         xprv_parse_err: crate::key_origin::KeyOriginError,
     },
+
+    #[error(transparent)]
+    PsbtDecodeError(#[from] psbts_serde::DecodeError),
 }
 
 #[derive(Debug)]

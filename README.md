@@ -76,8 +76,7 @@ Needed executables: `bitcoind`, `gpg`, `dinasty`, `pass`, `age`
 
 M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/A/gpg-passphrase 24`
 M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/B/gpg-passphrase 24`
-M) `gpg --export --export-options export-minimal <gpg-id> | base64`  # armor is not suitable for barcode reading
-A,B) loadkeys it/us to switch keyboard mapping, gpg--import
+M) `gpg --export <gpg-id> | base32`  # armor is not suitable for barcode reading, base32 is slightly more efficient in QR code and doesn't contain character that are mapped differently in different keyboard layout
 
 A,B) import gpg public key of M DEADBEEM
 A) `gpg --full-generate-key` use machine/A/gpg-passphrase -> eg DEADBEE1
@@ -94,10 +93,11 @@ A,B) `dinasty seed` with the value from examples and check result match
 
 A) `dinasty seed --codex32-id leet | encrypt >seed` piped to encrypted data, actual launch dices, terminated with return and ctrl-d
 A) `cat seed | decrypt` put passphrase, will be requested once per session, `killall gpg-agent` to remove it from memory
-B) `cat - | encrypt >seed` input the seed from machine A so that the seed is saved in the other machine too
+B) `cat - | encrypt >seed` input MANUALLY the seed from machine A so that the seed is saved in the other machine too
 
 A,B) `decrypt seed | dinasty xkey m/0h | encrypt >owner_xkey`
 A,B) `decrypt owner_key | dinasty descriptor | encrypt >owner_descriptor`  both machine could have signer wallet 
+A,B) `decrypt owner_descriptor | shasum -a 256` take note of descriptor hash, ensure they are the same on A,B
 
 A) `decrypt seed | dinasty xkey m/1h | encrypt >heir_xkey`
 A) `decrypt owner_key | dinasty descriptor --public | encrypt >owner_descriptor_public` 
@@ -107,8 +107,10 @@ A) `decrypt heir_key | dinasty descriptor --public --only-external | encrypt >he
 A) `decrypt heir_descriptor_external_public && decrypt owner_descriptor_public`  bring to M
 
 M) `cat owner_descriptor_public | dinasty import --wallet-name watch_only`
+M) `bitcoin-cli getnewaddress` take note of the first address F
 
 A,B) `decrypt owner_descriptor | dinasty import --wallet-name signer`
+A,B) `bitcoin-cli getnewaddress` ensure they are the same and equal to F
 
 A) `decrypt heir_descriptor | encrypt_to_online >heir_descriptor_encrypted_to_online` bring to M
 
@@ -117,10 +119,19 @@ A,B) `decrypt heir_key | dinasty identity  | encrypt heir_identity_public`
 A,B) check age derive private to same public
 A,B) `alias encrypt_to_heir='age --encrypt -r ${cat heir_identity_public}'`
 
+## Heir descriptor (once)
+
+A or B) `decrypt heir_descriptor | encrypt heir_identity | base32 | dinasty qr` bring to M
+M) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base 32 --decode > heir_descriptor_encrypted`
 
 ## Locktime
 
-M) `dinasty locktime -w watch_only --locktime-future 200000 --to-public-descriptor ${cat heir_descriptor_external_public} >locktime_to_be_signed` bring to A
+To be done whenever UTXO in owner wallet are created, for example for a change in a spending or a refresh to eliminate near-to-expire locktimes.
 
-A) `decrypt owner_descriptor | dinasty sign -w signer --psbt-file locktime_to_be_signed | cat - ${decrypt heir_descriptor} | encrypt_to_heir >locktime_presigned_with_descriptor` bring to M, email to heir
+M) `dinasty locktime -w watch_only --locktime-future 200000 --to-public-descriptor ${cat heir_descriptor_external_public} | tee >(shasum -a 256 1>&2) | base32 | dinasty qr` bring to A, take note hash H_locktime
 
+A) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base32 --decode | tee >(shasum -a 256 1>&2) | cat > locktime_to_be_signed` check same H_locktime
+
+A) `decrypt owner_descriptor | dinasty sign -w signer --psbt-file locktime_to_be_signed | encrypt_to_heir | tee >(shasum -a 256 1>&2) | base32 | dinasty qr` bring back to M, take not hash H_signed_locktime
+
+M) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base32 --decode | tee >(shasum -a 256 1>&2) | cat > locktime_signed_encrypted` check same  H_signed_locktime

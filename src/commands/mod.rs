@@ -242,11 +242,22 @@ pub enum Commands {
         psbt_file: PathBuf,
     },
 
-    /// Broadcast the transactions given on stdin
+    /// Broadcast the PSBTs given on stdin
     ///
     /// for an example see `Sign` command
     #[clap(verbatim_doc_comment)]
     Broadcast,
+
+    /// Convert the binary PSBTs given from stdin to new-line separated base64
+    Convert {
+        /// From base64 to binary
+        #[arg(long)]
+        inverted: bool,
+    },
+
+    /// Take PSBTs from stdin and for each print the net balance from the perspective of given
+    /// public descriptors
+    Balance { public_descriptor: String },
 
     /// Encrypt standard input for given recipients using the age protocol
     ///
