@@ -71,19 +71,18 @@ fn print_qr(
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use bech32::{ToBase32, Variant};
     use bitcoin::psbt::PartiallySignedTransaction;
+    use std::str::FromStr;
 
     #[test]
     fn qr() {
-        let psbt_str = include_str!("../../test_data/psbt_base64");
+        let psbt_str = crate::test_util::psbt_base64();
         assert_eq!(psbt_str.len(), 452);
         let qr_code = qr_code::QrCode::new(psbt_str.as_bytes()).unwrap();
         assert_eq!(qr_code.to_vec().len(), 6561); // base64
 
-        let psbt = PartiallySignedTransaction::from_str(psbt_str).unwrap();
+        let psbt = PartiallySignedTransaction::from_str(&psbt_str).unwrap();
         let psbt_bytes = psbt.serialize();
         let psbt_bech32 = bech32::encode("psbt", psbt_bytes.to_base32(), Variant::Bech32m)
             .unwrap()

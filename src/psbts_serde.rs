@@ -81,6 +81,9 @@ mod test {
         let psbts = vec![psbt.clone(), psbt];
         let psbts_ser = super::serialize(&psbts);
 
+        let mut file = std::fs::File::create("test").unwrap();
+        std::io::Write::write_all(&mut file, &psbts_ser).unwrap();
+
         let psbts_back = super::deserialize(&psbts_ser).unwrap();
         assert_eq!(psbts, psbts_back);
     }

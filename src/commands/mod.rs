@@ -249,6 +249,17 @@ pub enum Commands {
     Broadcast,
 
     /// Convert the binary PSBTs given from stdin to new-line separated base64
+    ///
+    /// ```
+    /// # use dinasty::test_util::*;
+    /// let psbts_binary = psbts_binary();
+    /// let stdin = psbts_binary.clone();
+    /// let stdout = inner_sh(&stdin, "dinasty convert");
+    /// let stdin = String::from_utf8(stdout).expect("Invalid utf8");
+    /// let stdout = sh_psbts(&stdin, "dinasty convert --invert");
+    /// assert_eq!(psbts_binary, dinasty::psbts_serde::serialize(&stdout));
+    ///
+    /// ```
     Convert {
         /// From base64 to binary
         #[arg(long)]

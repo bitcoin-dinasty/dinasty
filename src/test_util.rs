@@ -13,8 +13,8 @@ pub use bitcoind::bitcoincore_rpc::RpcApi;
 pub use std::io::Write;
 pub use std::str::FromStr;
 
-fn inner_sh(stdin: &str, command: &str) -> Vec<u8> {
-    let stdin = (!stdin.is_empty()).then(|| StdinData::new(stdin.as_bytes().to_vec()));
+pub fn inner_sh(stdin: &[u8], command: &str) -> Vec<u8> {
+    let stdin = (!stdin.is_empty()).then(|| StdinData::new(stdin.to_vec()));
 
     let cli = Cli::try_parse_from(command.split(' ')).unwrap();
     inner_main(cli, stdin).expect(command)
@@ -22,13 +22,13 @@ fn inner_sh(stdin: &str, command: &str) -> Vec<u8> {
 
 /// Emulate the shell by parsing the given command with the clap struct `Cli`
 pub fn sh(stdin: &str, command: &str) -> String {
-    let bytes = inner_sh(stdin, command);
+    let bytes = inner_sh(stdin.as_bytes(), command);
     String::from_utf8(bytes).expect("Invalid utf8")
 }
 
 // Emulate the shell by parsing the given command with the clap struct `Cli`, parse result as PSBTs
 pub fn sh_psbts(stdin: &str, command: &str) -> Vec<PartiallySignedTransaction> {
-    let bytes = inner_sh(stdin, command);
+    let bytes = inner_sh(stdin.as_bytes(), command);
     psbts_serde::deserialize(&bytes).expect("Invalid PSBTs")
 }
 
@@ -123,4 +123,14 @@ pub fn setup_node_and_wallets() -> TestEnv {
         signer: wallets.signer,
         watch_only: wallets.watch_only,
     }
+}
+
+pub fn psbt_base64() -> String {
+    let psbt_str = include_str!("../test_data/psbt_base64");
+    psbt_str.to_string()
+}
+
+pub fn psbts_binary() -> Vec<u8> {
+    let psbt_bytes = include_bytes!("../test_data/psbts_binary");
+    psbt_bytes.to_vec()
 }
