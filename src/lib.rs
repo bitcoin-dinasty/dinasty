@@ -1,13 +1,13 @@
 #![doc = include_str!("../README.md")]
 
 use age::{secrecy::ExposeSecret, x25519::Identity};
-use bitcoin::{psbt::PartiallySignedTransaction, Network};
+use bitcoin::Network;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 use commands::{Commands, CoreConnectOptional};
 use error::Error;
 use key_origin::XprvWithSource;
-use std::{fmt::Display, fs, str::FromStr};
+use std::{fmt::Display, fs, io::Read, str::FromStr};
 use stdin::StdinData;
 
 use crate::core_connect::CoreConnect;
@@ -19,6 +19,7 @@ pub mod error;
 pub mod key_origin;
 pub mod psbts_serde;
 pub mod stdin;
+pub mod stdout;
 pub mod test_util; // pub because needed in doctest
 
 #[derive(Parser)]
@@ -78,8 +79,7 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
         } => {
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
             let psbts = commands::refresh(&core_connect, &wallet_name, older_than_blocks)?;
-            let pstbs_text = psbts.iter().map(ToString::to_string).collect::<Vec<_>>();
-            pstbs_text.join("\n").to_string().as_bytes().to_vec()
+            psbts_serde::serialize(&psbts)
         }
         Commands::Locktime {
             wallet_name,
@@ -100,13 +100,10 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
             psbt_file,
         } => {
             let descriptor = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
+            let mut file_content = vec![];
+            fs::File::open(&psbt_file)?.read_to_end(&mut file_content)?;
 
-            let psbt = fs::read_to_string(&psbt_file)?;
-
-            let psbts = psbt
-                .split('\n')
-                .map(|p| PartiallySignedTransaction::from_str(p))
-                .collect::<Result<Vec<_>, _>>()?;
+            let psbts = psbts_serde::deserialize(&file_content)?;
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
 
             let signed_psbts: Vec<_> =
@@ -116,14 +113,9 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
         }
 
         Commands::Broadcast => {
-            let psbts = stdin.ok_or(Error::StdinExpected)?.to_string()?;
+            let psbts = stdin.ok_or(Error::StdinExpected)?.to_psbts()?;
 
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
-
-            let psbts = psbts
-                .split('\n')
-                .map(|p| PartiallySignedTransaction::from_str(p))
-                .collect::<Result<Vec<_>, _>>()?;
 
             commands::broadcast(&core_connect, &psbts)?
                 .as_bytes()
@@ -192,7 +184,7 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
             generate(shell, &mut Cli::command(), "dinasty", &mut result);
             result
         }
-        Commands::Convert { inverted } => {
+        Commands::Convert { invert: inverted } => {
             if inverted {
                 let content = stdin.ok_or(Error::StdinExpected)?.to_multiline_string()?;
                 let psbts: Result<Vec<_>, _> = content.iter().map(|e| e.parse()).collect();

@@ -126,12 +126,12 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// # let TestNode { node, core_connect_params, .. } = setup_node();
     /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
-    /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name signer --with-private-keys"));
+    /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name signer --with-private-keys")).to_string();
     /// assert!(stdout.contains("success\":true"));
     /// assert!(stdout.contains("error\":null"));
     ///
     /// let stdin = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)";
-    /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name watch_only"));
+    /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name watch_only")).to_string();
     /// assert!(stdout.contains("success\":true"));
     /// assert!(stdout.contains("error\":null"));
     /// ```
@@ -160,8 +160,8 @@ pub enum Commands {
     /// # let TestEnv { node, node_address, core_connect_params, watch_only, signer, .. } = setup_node_and_wallets();
     /// # assert_eq!(node.client.get_blockchain_info().unwrap().blocks, 101);
     /// # let heir_public_descriptor = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/0/*)#04qa3cn0";
-    /// let stdout = sh_psbts("", &format!("dinasty {core_connect_params} locktime -w watch_only --locktime-future 200 --to-public-descriptor {heir_public_descriptor}"));
-    /// let signed_psbt = stdout[0].clone();
+    /// let stdout = sh("", &format!("dinasty {core_connect_params} locktime -w watch_only --locktime-future 200 --to-public-descriptor {heir_public_descriptor}"));
+    /// let signed_psbt = stdout.to_psbts().unwrap()[0].clone();
     /// let tx = signed_psbt.extract_tx();
     /// assert_eq!(tx.lock_time, bitcoin::absolute::LockTime::from_height(301).unwrap());
     /// ```
@@ -195,8 +195,7 @@ pub enum Commands {
     /// # let TestEnv { node, core_connect_params, watch_only, signer, .. } = setup_node_and_wallets();
     /// # assert_eq!(node.client.get_blockchain_info().unwrap().blocks, 101);
     /// let stdout = sh("", &format!("dinasty {core_connect_params} refresh -w watch_only --older-than-blocks 10"));
-    /// let signed_psbt = bitcoin::psbt::PartiallySignedTransaction::from_str(&stdout).unwrap();
-    /// let tx = signed_psbt.extract_tx();
+    /// let tx = stdout.to_psbts().unwrap()[0].clone().extract_tx();
     /// let address = bitcoin::Address::from_script(&tx.output[0].script_pubkey, bitcoin::Network::Regtest).unwrap();
     /// let address_info = signer.get_address_info(&address).unwrap();
     /// assert!(address_info.is_mine.unwrap());
@@ -224,13 +223,13 @@ pub enum Commands {
     /// # std::fs::write(&file, psbt).unwrap();
     /// # let psbt_file_path = file.path().display();
     /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
-    /// let stdout = sh_psbts(&stdin, &format!("dinasty {core_connect_params} sign -w signer --psbt-file {psbt_file_path}"));
-    /// let signed_psbt = stdout[0].clone();
-    /// let tx = signed_psbt.extract_tx();
+    /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} sign -w signer --psbt-file {psbt_file_path}"));
+    /// let signed_psbts = stdout;
+    /// let tx = signed_psbts.to_psbts().unwrap()[0].clone().extract_tx();
     /// let result = node.client.test_mempool_accept(&[&tx]).unwrap();
     /// assert!(result[0].allowed);
-    /// //TODO let stdout = sh("", &format!("dinasty {core_connect_params} broadcast --psbt-file {psbt_file_path}"));
-    /// //assert_eq!(stdout, tx.txid().to_string());
+    /// let stdout = sh(signed_psbts, &format!("dinasty {core_connect_params} broadcast"));
+    /// assert_eq!(stdout, tx.txid().to_string());
     /// ```
     #[clap(verbatim_doc_comment)]
     Sign {
@@ -254,16 +253,16 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// let psbts_binary = psbts_binary();
     /// let stdin = psbts_binary.clone();
-    /// let stdout = inner_sh(&stdin, "dinasty convert");
-    /// let stdin = String::from_utf8(stdout).expect("Invalid utf8");
-    /// let stdout = sh_psbts(&stdin, "dinasty convert --invert");
+    /// let stdout = sh(&stdin, "dinasty convert");
+    /// let stdin = stdout;
+    /// let stdout = sh(&stdin, "dinasty convert --invert").to_psbts().unwrap();
     /// assert_eq!(psbts_binary, dinasty::psbts_serde::serialize(&stdout));
     ///
     /// ```
     Convert {
         /// From base64 to binary
         #[arg(long)]
-        inverted: bool,
+        invert: bool,
     },
 
     /// Take PSBTs from stdin and for each print the net balance from the perspective of given
@@ -278,7 +277,7 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// let plain_text = "plain text";
     /// let stdin = plain_text;
-    /// let stdout = sh(&stdin, "dinasty encrypt -r age18addpm2vs78d96jg39yc3d2dehtzfef75nh8c6xtz5xejk6l3svs8c8kkl");
+    /// let stdout = sh(&stdin, "dinasty encrypt -r age18addpm2vs78d96jg39yc3d2dehtzfef75nh8c6xtz5xejk6l3svs8c8kkl").to_string();
     /// assert!(stdout.starts_with("-----BEGIN AGE ENCRYPTED FILE-----"));
     /// assert!(!stdout.contains(plain_text));
     /// assert!(stdout.ends_with("-----END AGE ENCRYPTED FILE-----\n"));
@@ -306,10 +305,10 @@ pub enum Commands {
     /// # let encrypted_file_path = file.path().display();
     /// let stdin = "AGE-SECRET-KEY-18ZTCPKR7N22AGJYXFW5ATW6SQW2X74HCV37A686UG0ZP9MX6LF2SRHF78N";
     /// let stdout = sh(&stdin, &format!("dinasty decrypt {encrypted_file_path}"));
-    /// assert_eq!(plain_text, stdout);
+    /// assert_eq!(stdout, plain_text);
     /// let stdin = "[01e0b4da/0']xprv9tuwrYmA3h7J173Z81dhZjd59kZARcnJrS9M3THjWdGqp4RUU8jB5Vk48hZYDKUoRpYKfDxR5ytaBYaUn4pF5RiZbPyENrvTuhWtuXjT8AM";
     /// let stdout = sh(&stdin, &format!("dinasty decrypt {encrypted_file_path}"));
-    /// assert_eq!(plain_text, stdout);
+    /// assert_eq!(stdout, plain_text);
     /// ```
     #[clap(verbatim_doc_comment)]
     Decrypt {

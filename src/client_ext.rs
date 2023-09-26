@@ -9,7 +9,7 @@ use bitcoind::bitcoincore_rpc::{
     Auth, Client, Error, RpcApi,
 };
 
-use crate::core_connect::CoreConnect;
+use crate::{core_connect::CoreConnect, psbts_serde};
 
 pub trait ClientExt {
     fn add_checksum(&self, desc_without_checksum: &str) -> Result<String, Error>;
@@ -38,7 +38,7 @@ pub trait ClientExt {
         psbts: &[PartiallySignedTransaction],
     ) -> Result<Vec<bool>, Error>;
 
-    fn prepare_psbt_to(&self, address: &Address, satoshi: u64) -> Result<String, Error>;
+    fn prepare_psbt_to(&self, address: &Address, satoshi: u64) -> Result<Vec<u8>, Error>;
 }
 
 impl ClientExt for Client {
@@ -127,7 +127,7 @@ impl ClientExt for Client {
             .collect())
     }
 
-    fn prepare_psbt_to(&self, address: &Address, satoshi: u64) -> Result<String, Error> {
+    fn prepare_psbt_to(&self, address: &Address, satoshi: u64) -> Result<Vec<u8>, Error> {
         let mut outputs = std::collections::HashMap::new();
         let to = bitcoin::Amount::from_sat(satoshi);
         outputs.insert(address.to_string(), to);
@@ -135,6 +135,7 @@ impl ClientExt for Client {
         let psbt = self
             .wallet_create_funded_psbt(&[], &outputs, None, None, None)
             .unwrap();
-        Ok(psbt.psbt)
+        let psbt: PartiallySignedTransaction = psbt.psbt.parse().unwrap();
+        Ok(psbts_serde::serialize(&[psbt]))
     }
 }

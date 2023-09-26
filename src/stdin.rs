@@ -1,6 +1,8 @@
 use std::io::Read;
 
-use crate::commands::Commands;
+use bitcoin::psbt::PartiallySignedTransaction;
+
+use crate::{commands::Commands, psbts_serde};
 
 pub struct StdinData(Vec<u8>);
 
@@ -11,6 +13,9 @@ pub enum StdinError {
 
     #[error("One text line expected in stdin, found {0}")]
     Not1Lines(usize),
+
+    #[error(transparent)]
+    DecodeError(#[from] psbts_serde::DecodeError),
 }
 
 impl StdinData {
@@ -30,12 +35,23 @@ impl StdinData {
     pub fn to_string(self) -> Result<String, StdinError> {
         Ok(String::from_utf8(self.0)?)
     }
+
+    pub fn to_psbts(&self) -> Result<Vec<PartiallySignedTransaction>, StdinError> {
+        Ok(psbts_serde::deserialize(&self.0)?)
+    }
+
     pub fn to_multiline_string(self) -> Result<Vec<String>, StdinError> {
         let string = self.to_string()?;
         Ok(string.split("\n").map(ToString::to_string).collect())
     }
     pub fn to_vec(self) -> Vec<u8> {
         self.0
+    }
+}
+
+impl AsRef<[u8]> for StdinData {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 

@@ -72,18 +72,14 @@ mod test {
         psbt::PartiallySignedTransaction,
     };
 
-    use crate::psbts_serde::MAGIC;
+    use crate::{psbts_serde::MAGIC, test_util::psbt_base64};
 
     #[test]
     fn psbts_roundtrip() {
-        let psbt_str = include_str!("../test_data/psbt_base64");
+        let psbt_str = psbt_base64();
         let psbt: PartiallySignedTransaction = psbt_str.parse().unwrap();
         let psbts = vec![psbt.clone(), psbt];
         let psbts_ser = super::serialize(&psbts);
-
-        let mut file = std::fs::File::create("test").unwrap();
-        std::io::Write::write_all(&mut file, &psbts_ser).unwrap();
-
         let psbts_back = super::deserialize(&psbts_ser).unwrap();
         assert_eq!(psbts, psbts_back);
     }
