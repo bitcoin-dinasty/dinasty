@@ -67,6 +67,12 @@ pub enum Error {
 
     #[error(transparent)]
     PsbtDecodeError(#[from] psbts_serde::DecodeError),
+
+    #[error(transparent)]
+    Balance(#[from] commands::BalanceError),
+
+    #[error(transparent)]
+    Miniscript(#[from] miniscript::Error),
 }
 
 #[derive(Debug)]

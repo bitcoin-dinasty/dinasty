@@ -75,53 +75,72 @@ Use 2 offline devices A and B and another online devices M
 Needed executables: `bitcoind`, `gpg`, `dinasty`, `pass`, `age` 
 
 M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/A/gpg-passphrase 24`
+
 M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/B/gpg-passphrase 24`
+
 M) `gpg --export <gpg-id> | base32`  # armor is not suitable for barcode reading, base32 is slightly more efficient in QR code and doesn't contain character that are mapped differently in different keyboard layout
 
 A,B) import gpg public key of M DEADBEEM
+
 A) `gpg --full-generate-key` use machine/A/gpg-passphrase -> eg DEADBEE1
+
 B) `gpg --full-generate-key` use machine/B/gpg-passphrase -> eg DEADBEE2
 
 A,B) `alias decrypt='gpg --decrypt'`
-A) `alias encrypt='gpg --armor --encrypt -r DEADBEE1'` 
-B) `alias encrypt='gpg --armor --encrypt -r DEADBEE2'`
-A,B) `alias encrypt_to_online='gpg --encrypt DEADBEEM --armor'`
-`alias qr=dinasty qr`
 
+A) `alias encrypt='gpg --encrypt -r DEADBEE1' | base32`
+
+B) `alias encrypt='gpg --encrypt -r DEADBEE2' | base32`
+
+A,B) `alias encrypt_to_online='gpg --encrypt DEADBEEM' | base32`
+`alias qr=dinasty qr`
 
 A,B) `dinasty seed` with the value from examples and check result match
 
 A) `dinasty seed --codex32-id leet | encrypt >seed` piped to encrypted data, actual launch dices, terminated with return and ctrl-d
+
 A) `cat seed | decrypt` put passphrase, will be requested once per session, `killall gpg-agent` to remove it from memory
+
 B) `cat - | encrypt >seed` input MANUALLY the seed from machine A so that the seed is saved in the other machine too
 
 A,B) `decrypt seed | dinasty xkey m/0h | encrypt >owner_xkey`
+
 A,B) `decrypt owner_key | dinasty descriptor | encrypt >owner_descriptor`  both machine could have signer wallet 
+
 A,B) `decrypt owner_descriptor | shasum -a 256` take note of descriptor hash, ensure they are the same on A,B
 
 A) `decrypt seed | dinasty xkey m/1h | encrypt >heir_xkey`
+
 A) `decrypt owner_key | dinasty descriptor --public | encrypt >owner_descriptor_public` 
+
 A) `decrypt heir_key | dinasty descriptor | encrypt >heir_descriptor` 
+
 A) `decrypt heir_key | dinasty descriptor --public --only-external | encrypt >heir_descriptor_external_public` 
 
 A) `decrypt heir_descriptor_external_public && decrypt owner_descriptor_public`  bring to M
 
 M) `cat owner_descriptor_public | dinasty import --wallet-name watch_only`
+
 M) `bitcoin-cli getnewaddress` take note of the first address F
 
 A,B) `decrypt owner_descriptor | dinasty import --wallet-name signer`
+
 A,B) `bitcoin-cli getnewaddress` ensure they are the same and equal to F
 
 A) `decrypt heir_descriptor | encrypt_to_online >heir_descriptor_encrypted_to_online` bring to M
 
 A,B) `decrypt heir_key | dinasty identity --private | encrypt heir_identity`  write down on multiple sheets, give to trusted parties 
+
 A,B) `decrypt heir_key | dinasty identity  | encrypt heir_identity_public`
+
 A,B) check age derive private to same public
+
 A,B) `alias encrypt_to_heir='age --encrypt -r ${cat heir_identity_public}'`
 
 ## Heir descriptor (once)
 
 A or B) `decrypt heir_descriptor | encrypt heir_identity | base32 | dinasty qr` bring to M
+
 M) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base 32 --decode > heir_descriptor_encrypted`
 
 ## Locktime
@@ -135,3 +154,8 @@ A) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base32 --decode | tee >
 A) `decrypt owner_descriptor | dinasty sign -w signer --psbt-file locktime_to_be_signed | encrypt_to_heir | tee >(shasum -a 256 1>&2) | base32 | dinasty qr` bring back to M, take not hash H_signed_locktime
 
 M) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base32 --decode | tee >(shasum -a 256 1>&2) | cat > locktime_signed_encrypted` check same  H_signed_locktime
+
+
+gpg --import
+gpg --export
+gpg --list-keys --with-subkey-fingerprints

@@ -30,7 +30,6 @@ pub struct TestNode {
     pub core_connect_params: String,
 }
 
-// TODO return also core connect params, make a struct, make setup_node_and_wallet returning both
 /// Launch a bitcoin core node in regtest mode
 pub fn setup_node() -> TestNode {
     let node = bitcoind::BitcoinD::new(bitcoind::exe_path().unwrap()).unwrap();

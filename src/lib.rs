@@ -38,7 +38,6 @@ pub struct Cli {
 }
 
 pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> {
-    //TODO return Vec<u8>
     Ok(match cli.command {
         Commands::Seed { codex32_id } => {
             let dices = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
@@ -202,8 +201,23 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
             }
         }
         Commands::Balance {
-            public_descriptor: _,
-        } => todo!(),
+            public_descriptors,
+            verbose,
+        } => {
+            let psbts = stdin.ok_or(Error::StdinExpected)?.to_psbts()?;
+            let mut descriptors = vec![];
+            for str in public_descriptors {
+                descriptors.push(str.parse()?);
+            }
+            let balances = commands::balances(&psbts, &descriptors)?;
+            if verbose {
+                balances.verbose()
+            } else {
+                balances.net_balance()
+            }
+            .as_bytes()
+            .to_vec()
+        }
     })
 }
 

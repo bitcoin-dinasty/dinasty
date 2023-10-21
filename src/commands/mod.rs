@@ -1,3 +1,4 @@
+mod balance;
 mod broadcast;
 mod decrypt;
 mod descriptor;
@@ -17,6 +18,7 @@ use clap::{Args, Subcommand};
 use clap_complete::Shell;
 use std::{net::SocketAddrV4, path::PathBuf};
 
+pub use balance::{balances, BalanceError};
 pub use broadcast::{broadcast, BroadcastError};
 pub use decrypt::{decrypt, DecryptError};
 pub use descriptor::descriptor;
@@ -267,7 +269,25 @@ pub enum Commands {
 
     /// Take PSBTs from stdin and for each print the net balance from the perspective of given
     /// public descriptors
-    Balance { public_descriptor: String },
+    ///
+    /// ```
+    /// # use dinasty::test_util::*;
+    /// # let TestEnv { node, node_address, core_connect_params, watch_only, .. } = setup_node_and_wallets();
+    /// # let stdin = watch_only.prepare_psbt_to(&node_address, 10_000).unwrap();
+    /// let a = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/0/*)";
+    /// let b = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/1/*)";
+    /// let stdout = sh(&stdin, &format!("dinasty balance --public-descriptors {a} --public-descriptors {b}"));
+    /// assert_eq!(stdout, "-0.0001142 BTC");
+    /// ```
+    Balance {
+        /// The public descriptors to calculate the net balance against, usually 2, the internal and the external ones.
+        #[arg(long)]
+        public_descriptors: Vec<String>,
+
+        /// Other than the net balances show other cumulative information: the number of transactions, the txids and the total fee.
+        #[arg(short, long)]
+        verbose: bool, //TODO
+    },
 
     /// Encrypt standard input for given recipients using the age protocol
     ///

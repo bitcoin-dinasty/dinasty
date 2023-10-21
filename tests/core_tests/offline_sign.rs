@@ -16,8 +16,11 @@ fn offline_sign() {
 
     // setup online watch-only wallet
     let wo_desc = format!("tr({xpub}/0/*)");
+    println!("{wo_desc}");
     let wo_desc = node.client.add_checksum(&wo_desc).unwrap();
     let wo_desc_change = format!("tr({xpub}/1/*)");
+    println!("{wo_desc_change}");
+
     let wo_desc_change = node.client.add_checksum(&wo_desc_change).unwrap();
     let wo_client = node
         .client
@@ -59,13 +62,15 @@ fn offline_sign() {
     outputs.insert(node_address.to_string(), sent_back);
 
     let psbt = wo_client
-        .wallet_create_funded_psbt(&[], &outputs, None, None, None)
+        .wallet_create_funded_psbt(&[], &outputs, None, None, Some(true))
         .unwrap();
     let fee = psbt.fee;
+    println!("{}", psbt.psbt);
 
     let psbt = offline_client
-        .wallet_process_psbt(&psbt.psbt, None, None, None)
+        .wallet_process_psbt(&psbt.psbt, None, None, Some(true))
         .unwrap();
+    println!("{}", psbt.psbt);
 
     let psbt = wo_client.finalize_psbt(&psbt.psbt, None).unwrap();
     assert!(psbt.complete);
