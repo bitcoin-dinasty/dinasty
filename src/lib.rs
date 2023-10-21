@@ -200,23 +200,15 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
                     .to_vec()
             }
         }
-        Commands::Balance {
-            public_descriptors,
-            verbose,
-        } => {
+        Commands::Details { public_descriptors } => {
             let psbts = stdin.ok_or(Error::StdinExpected)?.to_psbts()?;
             let mut descriptors = vec![];
             for str in public_descriptors {
                 descriptors.push(str.parse()?);
             }
-            let balances = commands::balances(&psbts, &descriptors)?;
-            if verbose {
-                balances.verbose()
-            } else {
-                balances.net_balance()
-            }
-            .as_bytes()
-            .to_vec()
+            let balances = commands::psbt_details(&psbts, &descriptors, cli.network)?;
+
+            balances.to_string().as_bytes().to_vec()
         }
     })
 }
