@@ -1,11 +1,11 @@
-use crate::core_connect::{ConnectError, CoreConnect};
+use crate::core_connect::CoreConnect;
 use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoind::bitcoincore_rpc::{self, RpcApi};
 
 #[derive(thiserror::Error, Debug)]
 pub enum BroadcastError {
     #[error(transparent)]
-    Connect(#[from] ConnectError),
+    Any(#[from] anyhow::Error),
 
     #[error(transparent)]
     CoreRpc(#[from] bitcoincore_rpc::Error),

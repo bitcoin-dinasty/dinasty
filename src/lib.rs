@@ -1,7 +1,9 @@
 #![doc = include_str!("../README.md")]
 
 use age::{secrecy::ExposeSecret, x25519::Identity};
+use anyhow::Context;
 use bitcoin::Network;
+use bitcoind::bitcoincore_rpc::RpcApi;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 use commands::{Commands, CoreConnectOptional};
@@ -37,7 +39,7 @@ pub struct Cli {
     pub core_connect: CoreConnectOptional,
 }
 
-pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> {
+pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>> {
     Ok(match cli.command {
         Commands::Seed { codex32_id } => {
             let dices = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
@@ -148,16 +150,12 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
             let identity = Identity::from_str(&str);
             let identity = match identity {
                 Ok(identity) => identity,
-                Err(id_e) => match XprvWithSource::from_str(&str) {
-                    Ok(xprv) => commands::identity(&xprv, cli.network)?,
-                    Err(xprv_e) => {
-                        return Err(Error::DecryptError {
-                            input: str.to_string(),
-                            identity_parse_err: id_e.to_string(),
-                            xprv_parse_err: xprv_e,
-                        })
-                    }
-                },
+                Err(id_e) => {
+                    let xprv = XprvWithSource::from_str(&str).with_context(|| {
+                        format!("input: '{str}' failed to parse as identity ({id_e}) or as xprv")
+                    })?;
+                    commands::identity(&xprv, cli.network)?
+                }
             };
 
             let file_content = std::fs::read_to_string(encrypted_file)?;
@@ -209,6 +207,16 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> Result<Vec<u8>, Error> 
             let balances = commands::psbt_details(&psbts, &descriptors, cli.network)?;
 
             balances.to_string().as_bytes().to_vec()
+        }
+        Commands::Ping => {
+            let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
+            if core_connect.client()?.ping().is_ok() {
+                "ok\n"
+            } else {
+                "ko\n"
+            }
+            .as_bytes()
+            .to_vec()
         }
     })
 }

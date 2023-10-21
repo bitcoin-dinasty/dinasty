@@ -1,5 +1,5 @@
 use crate::client_ext::ClientExt;
-use crate::core_connect::{self, CoreConnect};
+use crate::core_connect::CoreConnect;
 use bitcoind::bitcoincore_rpc;
 use bitcoind::bitcoincore_rpc::jsonrpc::serde_json;
 
@@ -11,7 +11,7 @@ pub enum ImportError {
     CoreRpc(#[from] bitcoincore_rpc::Error),
 
     #[error(transparent)]
-    CoreConnect(#[from] core_connect::ConnectError),
+    Any(#[from] anyhow::Error),
 
     #[error(transparent)]
     Serde(#[from] serde_json::Error),

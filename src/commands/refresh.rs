@@ -10,10 +10,7 @@ use bitcoind::bitcoincore_rpc::{
     RpcApi,
 };
 
-use crate::{
-    client_ext::ClientExt,
-    core_connect::{self, CoreConnect},
-};
+use crate::{client_ext::ClientExt, core_connect::CoreConnect};
 
 #[derive(thiserror::Error, Debug)]
 pub enum RefreshError {
@@ -21,7 +18,7 @@ pub enum RefreshError {
     CoreRpc(#[from] bitcoincore_rpc::Error),
 
     #[error(transparent)]
-    CoreConnect(#[from] core_connect::ConnectError),
+    Any(#[from] anyhow::Error),
 
     #[error(transparent)]
     Psbt(#[from] PsbtParseError),

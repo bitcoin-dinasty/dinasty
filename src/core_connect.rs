@@ -3,6 +3,7 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::Context;
 use bitcoin::Network;
 use bitcoind::{
     bitcoincore_rpc::{self, Auth, Client, RpcApi},
@@ -30,23 +31,27 @@ pub struct CoreConnect {
 
 impl CoreConnect {
     /// Create an rpc client, checking it's on the same network as the given `network`
-    pub(crate) fn client(&self) -> Result<Client, ConnectError> {
-        let client = Client::new(
-            &format!("http://{}", self.node_socket),
-            Auth::CookieFile(self.node_cookie_path.clone()),
-        )?;
-        Self::check_network(&client, self.network)?;
-
-        Ok(client)
+    pub(crate) fn client(&self) -> anyhow::Result<Client> {
+        let url = format!("http://{}", self.node_socket);
+        self.client_inner(&url)
     }
 
     /// Create an rpc client using `wallet_name`, checking it's on the same network as the given `network`
-    pub fn client_with_wallet(&self, wallet_name: &str) -> Result<Client, ConnectError> {
-        let client = Client::new(
-            &format!("http://{}/wallet/{}", self.node_socket, wallet_name),
-            Auth::CookieFile(self.node_cookie_path.clone()),
-        )?;
-        Self::check_network(&client, self.network)?;
+    pub fn client_with_wallet(&self, wallet_name: &str) -> anyhow::Result<Client> {
+        let url = format!("http://{}/wallet/{}", self.node_socket, wallet_name);
+        self.client_inner(&url)
+    }
+
+    fn client_inner(&self, url: &str) -> anyhow::Result<Client> {
+        let client = Client::new(&url, Auth::CookieFile(self.node_cookie_path.clone()))
+            .with_context(|| {
+                format!(
+                    "Creating an rpc client to {} with cookie file {:?}",
+                    url, self.node_cookie_path
+                )
+            })?;
+        Self::check_network(&client, self.network)
+            .with_context(|| format!("Connecting to core RPC on {}", url))?;
 
         Ok(client)
     }

@@ -11,6 +11,6 @@ fn main() {
     let stdin = cli.command.needs_stdin().then(|| read_stdin());
     match inner_main(cli, stdin) {
         Ok(r) => stdout().write_all(&r).expect("fail to write to stdout"),
-        Err(e) => eprintln!("{e}"),
+        Err(e) => eprintln!("{e:?}"),
     }
 }

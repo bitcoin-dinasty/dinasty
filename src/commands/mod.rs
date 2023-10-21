@@ -149,6 +149,8 @@ pub enum Commands {
         with_private_keys: bool,
     },
 
+    Ping,
+
     /// For every old UTXO creates a locktimed transaction to another wallet
     ///
     /// Connects to a local instance of bitcoin core, for every UTXO in `wallet_name` creates
@@ -356,7 +358,9 @@ pub enum Commands {
     },
 
     #[clap(hide = true)]
-    GenerateCompletion { shell: Shell },
+    GenerateCompletion {
+        shell: Shell,
+    },
 }
 
 #[derive(Debug, Args)]

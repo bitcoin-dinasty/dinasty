@@ -15,7 +15,7 @@ use bitcoind::bitcoincore_rpc::{
     RpcApi,
 };
 
-use crate::core_connect::{self, CoreConnect};
+use crate::core_connect::CoreConnect;
 
 #[derive(thiserror::Error, Debug)]
 pub enum LocktimeError {
@@ -23,7 +23,7 @@ pub enum LocktimeError {
     CoreRpc(#[from] bitcoincore_rpc::Error),
 
     #[error(transparent)]
-    CoreConnect(#[from] core_connect::ConnectError),
+    Any(#[from] anyhow::Error),
 
     #[error(transparent)]
     Psbt(#[from] PsbtParseError),

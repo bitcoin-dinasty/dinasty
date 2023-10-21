@@ -3,10 +3,7 @@ use std::str::FromStr;
 use bitcoin::psbt::{PartiallySignedTransaction, PsbtParseError};
 use bitcoind::bitcoincore_rpc::{self, RpcApi};
 
-use crate::{
-    client_ext::ClientExt,
-    core_connect::{self, CoreConnect},
-};
+use crate::{client_ext::ClientExt, core_connect::CoreConnect};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {
@@ -14,10 +11,10 @@ pub enum SignError {
     CoreRpc(#[from] bitcoincore_rpc::Error),
 
     #[error(transparent)]
-    CoreConnect(#[from] core_connect::ConnectError),
+    Psbt(#[from] PsbtParseError),
 
     #[error(transparent)]
-    Psbt(#[from] PsbtParseError),
+    Any(#[from] anyhow::Error),
 }
 
 pub fn sign(

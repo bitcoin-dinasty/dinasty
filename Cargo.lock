@@ -445,6 +445,7 @@ name = "dinasty"
 version = "0.1.0"
 dependencies = [
  "age",
+ "anyhow",
  "bech32",
  "bip39",
  "bitcoin",
