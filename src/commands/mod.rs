@@ -32,6 +32,8 @@ pub use seed::{seed, SeedError};
 pub use sign::{sign, SignError};
 pub use xkey::{key, KeyError};
 
+use crate::Descriptor;
+
 #[derive(Subcommand)]
 pub enum Commands {
     /// Print a seed (bip39 or bip93) given a list of dice launches.
@@ -129,13 +131,11 @@ pub enum Commands {
     /// # let TestNode { node, core_connect_params, .. } = setup_node();
     /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name signer --with-private-keys")).to_string();
-    /// assert!(stdout.contains("success\":true"));
-    /// assert!(stdout.contains("error\":null"));
+    /// assert!(stdout.contains("ok"));
     ///
     /// let stdin = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name watch_only")).to_string();
-    /// assert!(stdout.contains("success\":true"));
-    /// assert!(stdout.contains("error\":null"));
+    /// assert!(stdout.contains("ok"));
     /// ```
     ///
     /// This wallet setup example is used in other doc tests via [`crate::test_util::setup_node_and_wallets()`]
@@ -279,13 +279,13 @@ pub enum Commands {
     /// let a = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/0/*)";
     /// let b = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/1/*)";
     /// let stdout = sh(&stdin, &format!("dinasty details --public-descriptors {a} --public-descriptors {b}"));
-    /// assert_eq!(stdout.to_string().split("\n").skip(8).next().unwrap(), "net  :  -0.000114200");
+    /// assert_eq!(stdout.to_string().split("\n").skip(9).next().unwrap(), "net  :  -0.000114200");
     /// ```
     ///
     Details {
         /// The public descriptors to calculate the net balance against, usually 2, the internal and the external ones.
         #[arg(long)]
-        public_descriptors: Vec<String>,
+        public_descriptors: Vec<Descriptor>,
     },
 
     /// Encrypt standard input for given recipients using the age protocol

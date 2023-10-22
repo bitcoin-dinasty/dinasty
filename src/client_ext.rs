@@ -18,7 +18,7 @@ pub trait ClientExt {
         &self,
         descriptor: &str,
         internal: bool,
-    ) -> Result<Vec<ImportMultiResult>, Error>;
+    ) -> Result<ImportMultiResult, Error>;
 
     fn get_new_bech32m_address(&self, network: Network) -> Result<Address, Error>;
     fn send_all(&self, rec: &Address) -> Txid;
@@ -53,8 +53,8 @@ impl ClientExt for Client {
         &self,
         descriptor: &str,
         internal: bool,
-    ) -> Result<Vec<ImportMultiResult>, Error> {
-        self.import_descriptors(ImportDescriptors {
+    ) -> Result<ImportMultiResult, Error> {
+        let mut vec = self.import_descriptors(ImportDescriptors {
             descriptor: descriptor.to_owned(),
             timestamp: Timestamp::Now,
             active: Some(true),
@@ -62,7 +62,9 @@ impl ClientExt for Client {
             next_index: None,
             internal: Some(internal),
             label: None,
-        })
+        })?;
+        assert_eq!(vec.len(), 1);
+        Ok(vec.pop().unwrap())
     }
 
     fn get_new_bech32m_address(&self, network: Network) -> Result<Address, Error> {

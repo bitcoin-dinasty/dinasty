@@ -24,6 +24,8 @@ pub mod stdin;
 pub mod stdout;
 pub mod test_util; // pub because needed in doctest
 
+type Descriptor = miniscript::Descriptor<miniscript::DescriptorPublicKey>;
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -70,7 +72,8 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
             let key = XprvWithSource::from_str(&key)?;
 
-            commands::descriptor(key, public, only_external)
+            commands::descriptor(key, public, only_external)?
+                .to_string()
                 .as_bytes()
                 .to_vec()
         }
@@ -201,8 +204,10 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
         Commands::Details { public_descriptors } => {
             let psbts = stdin.ok_or(Error::StdinExpected)?.to_psbts()?;
             let mut descriptors = vec![];
-            for str in public_descriptors {
-                descriptors.push(str.parse()?);
+            for descriptor_maybe_multi in public_descriptors {
+                for descriptor in descriptor_maybe_multi.into_single_descriptors()? {
+                    descriptors.push(descriptor)
+                }
             }
             let balances = commands::psbt_details(&psbts, &descriptors, cli.network)?;
 
