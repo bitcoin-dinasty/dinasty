@@ -15,7 +15,7 @@ use bitcoind::bitcoincore_rpc::{
     RpcApi,
 };
 
-use crate::core_connect::CoreConnect;
+use crate::{core_connect::CoreConnect, Descriptor};
 
 #[derive(thiserror::Error, Debug)]
 pub enum LocktimeError {
@@ -30,6 +30,12 @@ pub enum LocktimeError {
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    Coonversion(#[from] miniscript::descriptor::ConversionError),
+
+    #[error(transparent)]
+    Miniscript(#[from] miniscript::Error),
 
     #[error("Invalid network: descriptor:{descriptor} expected:{expected}")]
     DerivedAddressInvalidNetwork {
@@ -47,28 +53,16 @@ pub enum LocktimeError {
 pub fn locktime(
     core_connect: &CoreConnect,
     wallet_name: &str,
-    heir_wo_descriptor: &str,
+    heir_wo_descriptor: &Descriptor,
     locktime_future: i64,
 ) -> Result<Vec<PartiallySignedTransaction>, LocktimeError> {
     let client = core_connect.client_with_wallet(wallet_name)?;
 
-    client.get_descriptor_info(heir_wo_descriptor)?; // validate heir descriptor
-
-    let heir_addresses_unchecked: Vec<_> =
-        client.derive_addresses(heir_wo_descriptor, Some([0, 1000]))?;
-    let mut heir_addresses = vec![];
-
-    for a in heir_addresses_unchecked {
-        if a.is_valid_for_network(core_connect.network) {
-            heir_addresses.push(a.assume_checked())
-        } else {
-            return Err(LocktimeError::DerivedAddressInvalidNetwork {
-                descriptor: a.network,
-                expected: core_connect.network,
-            });
-        }
+    let mut vec = vec![];
+    for i in 0..1_000 {
+        let derived = heir_wo_descriptor.at_derivation_index(i)?;
+        vec.push(derived.address(core_connect.network)?);
     }
-    let mut heir_addresses = heir_addresses.iter();
 
     let list_unspent = client.list_unspent(None, None, None, None, None)?;
     let list_unspent_outpoints: HashSet<_> = list_unspent
@@ -78,6 +72,7 @@ pub fn locktime(
 
     let mut result = vec![];
 
+    let mut heir_addresses = vec.iter();
     for unspent in list_unspent {
         let output_address = loop {
             // if the address is already mapped to a still unspent outpoint use another
@@ -85,6 +80,7 @@ pub fn locktime(
                 .next()
                 .ok_or(LocktimeError::NotEnoughAddresses)?;
             let info = client.get_address_info(current)?;
+            // assert!(info.is_mine.unwrap_or(false)); // TODO client with heir descriptor
             if let Some(GetAddressInfoResultLabel::Simple(label)) = info.labels.first() {
                 if let Ok(outpoint) = OutPoint::from_str(label) {
                     if list_unspent_outpoints.contains(&outpoint) {
@@ -135,7 +131,7 @@ pub fn locktime(
 
 #[cfg(test)]
 mod test {
-    use crate::{client_ext::ClientExt, commands, test_util::TestNode};
+    use crate::{client_ext::ClientExt, commands, test_util::TestNode, Descriptor};
     use bitcoin::Network;
     use bitcoind::bitcoincore_rpc::RpcApi;
 
@@ -153,6 +149,7 @@ mod test {
 
         let heir_wo_desc = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/0/*)";
         let heir_wo_desc = node.client.add_checksum(heir_wo_desc).unwrap();
+        let heir_wo_desc: Descriptor = heir_wo_desc.parse().unwrap();
 
         commands::import(&core_connect, owner_wo_desc, "wo", false).unwrap();
         commands::import(&core_connect, owner_desc, "signer", true).unwrap();

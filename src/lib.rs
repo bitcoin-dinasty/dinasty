@@ -201,15 +201,10 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
                     .to_vec()
             }
         }
-        Commands::Details { public_descriptors } => {
+        Commands::Details { descriptor } => {
             let psbts = stdin.ok_or(Error::StdinExpected)?.to_psbts()?;
-            let mut descriptors = vec![];
-            for descriptor_maybe_multi in public_descriptors {
-                for descriptor in descriptor_maybe_multi.into_single_descriptors()? {
-                    descriptors.push(descriptor)
-                }
-            }
-            let balances = commands::psbt_details(&psbts, &descriptors, cli.network)?;
+
+            let balances = commands::psbt_details(&psbts, descriptor, cli.network)?;
 
             balances.to_string().as_bytes().to_vec()
         }

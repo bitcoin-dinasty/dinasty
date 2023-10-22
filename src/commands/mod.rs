@@ -178,7 +178,7 @@ pub enum Commands {
 
         /// Recipient addresses of the created transactions will be created from this descriptor
         #[arg(long, required = true)]
-        to_public_descriptor: String,
+        to_public_descriptor: Descriptor, // TODO to_wallet_name
 
         /// Default value equals to about 4 years
         #[arg(long, default_value_t = 210_240)]
@@ -276,16 +276,15 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// # let TestEnv { node, node_address, core_connect_params, watch_only, .. } = setup_node_and_wallets();
     /// # let stdin = watch_only.prepare_psbt_to(&node_address, 10_000).unwrap();
-    /// let a = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/0/*)";
-    /// let b = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/1/*)";
-    /// let stdout = sh(&stdin, &format!("dinasty details --public-descriptors {a} --public-descriptors {b}"));
+    /// let desc = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)";
+    /// let stdout = sh(&stdin, &format!("dinasty details --descriptor {desc}"));
     /// assert_eq!(stdout.to_string().split("\n").skip(9).next().unwrap(), "net  :  -0.000114200");
     /// ```
     ///
     Details {
-        /// The public descriptors to calculate the net balance against, usually 2, the internal and the external ones.
+        /// The public descriptor (multipath) to calculate the net balance against.
         #[arg(long)]
-        public_descriptors: Vec<Descriptor>,
+        descriptor: Descriptor,
     },
 
     /// Encrypt standard input for given recipients using the age protocol

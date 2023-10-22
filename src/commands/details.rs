@@ -2,7 +2,6 @@ use bitcoin::{
     absolute, psbt::PartiallySignedTransaction, Address, Amount, Network, ScriptBuf, SignedAmount,
     Txid,
 };
-use miniscript::descriptor::ConversionError;
 use std::{collections::HashSet, fmt::Display};
 
 use crate::Descriptor;
@@ -14,6 +13,9 @@ pub enum BalanceError {
 
     #[error(transparent)]
     Coonversion(#[from] miniscript::descriptor::ConversionError),
+
+    #[error(transparent)]
+    Miniscript(#[from] miniscript::Error),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -40,15 +42,11 @@ pub struct GroupDetail {
 
 pub fn psbt_details(
     psbts: &[PartiallySignedTransaction],
-    descriptors: &[Descriptor],
+    descriptor: Descriptor,
     network: Network,
 ) -> Result<GroupDetail, BalanceError> {
     let mut group = GroupDetail::default();
-    let mut my_scripts = MyScripts::new(1_000);
-
-    for descriptor in descriptors {
-        my_scripts.add(descriptor)?;
-    }
+    let my_scripts = MyScripts::new(descriptor, 1_000)?;
 
     for (i, psbt) in psbts.iter().enumerate() {
         let balance = psbt_detail(i, &psbt, &my_scripts, network)?;
@@ -72,24 +70,21 @@ impl GroupDetail {
 struct MyScripts {
     descriptors: Vec<String>,
     cache: HashSet<ScriptBuf>,
-    how_many_per_desc: u32,
 }
 
 impl MyScripts {
-    pub fn new(how_many_per_desc: u32) -> Self {
-        Self {
-            descriptors: vec![],
-            cache: HashSet::new(),
-            how_many_per_desc,
+    pub fn new(multi_descriptor: Descriptor, how_many_per_desc: u32) -> Result<Self, BalanceError> {
+        let mut cache = HashSet::new();
+        let mut descriptors = vec![];
+        for descriptor in multi_descriptor.into_single_descriptors()? {
+            descriptors.push(descriptor.to_string());
+            for i in 0..how_many_per_desc {
+                let derived = descriptor.at_derivation_index(i)?;
+                cache.insert(derived.script_pubkey());
+            }
         }
-    }
-    pub fn add(&mut self, descriptor: &Descriptor) -> Result<(), ConversionError> {
-        for i in 0..self.how_many_per_desc {
-            let derived = descriptor.at_derivation_index(i)?;
-            self.cache.insert(derived.script_pubkey());
-        }
-        self.descriptors.push(descriptor.to_string());
-        Ok(())
+
+        Ok(Self { descriptors, cache })
     }
     pub fn contains(&self, script_pubkey: &ScriptBuf) -> bool {
         self.cache.contains(script_pubkey)
@@ -223,54 +218,33 @@ mod test {
     fn test_details() {
         // taken from offline_sign test
         let network = bitcoin::Network::Regtest;
-        let desc0 = "tr(tpubD6NzVbkrYhZ4XUprtHTHAWupukJFpWBJBBU9pyp62LVMhxnpb1dqDouxv5m2MTTAuWzLvFQmtgWwzHCFTrVXi1HscGm1BZ2xuGDN5KL4zNF/0/*)";
-        let desc1 = "tr(tpubD6NzVbkrYhZ4XUprtHTHAWupukJFpWBJBBU9pyp62LVMhxnpb1dqDouxv5m2MTTAuWzLvFQmtgWwzHCFTrVXi1HscGm1BZ2xuGDN5KL4zNF/1/*)";
+        let desc = "tr(tpubD6NzVbkrYhZ4XUprtHTHAWupukJFpWBJBBU9pyp62LVMhxnpb1dqDouxv5m2MTTAuWzLvFQmtgWwzHCFTrVXi1HscGm1BZ2xuGDN5KL4zNF/<0;1>/*)";
         let psbt = "cHNidP8BAH0CAAAAAbviGkHAroGDRJdSJP00ADQjpUVeAuccJEzYdTLcwCCIAAAAAAD9////AqCGAQAAAAAAFgAUFyAkO/DEPdd2RR3+zerWr2TDcTXUZQQqAQAAACJRIPaIAcQ3QPw+rS9eJQF9YxL4tR2Fm1T7DBxNCKACNVE+AAAAAAABASsA8gUqAQAAACJRIBEw73shsIFvsT73iQkCiZ/nCc2UwmnpwiKINaibjv6fIRZdw89r9r2z5GhjsuC2NxCQTpzxWEkpPeaP3hBES3QJEw0A1lI6KgAAAAAAAAAAARcgXcPPa/a9s+RoY7LgtjcQkE6c8VhJKT3mj94QREt0CRMAAAEFIM+8YdC2bFRzq/jzakcz/g+hqbs4xYR/8M9ntkrXOsK5IQfPvGHQtmxUc6v482pHM/4Poam7OMWEf/DPZ7ZK1zrCuQ0A1lI6KgEAAAAAAAAAAA==";
-        let desc0: Descriptor = desc0.parse().unwrap();
-        let desc1: Descriptor = desc1.parse().unwrap();
+        let desc: Descriptor = desc.parse().unwrap();
 
         let psbt: PartiallySignedTransaction = psbt.parse().unwrap();
-        let mut my_scripts = MyScripts::new(1_000);
-        my_scripts.add(&desc0).unwrap();
+        let my_scripts = MyScripts::new(desc.clone(), 1_000).unwrap();
 
-        let balance0 = psbt_detail(0, &psbt, &my_scripts, network).unwrap();
-        my_scripts.add(&desc1).unwrap();
+        let balance = psbt_detail(0, &psbt, &my_scripts, network).unwrap();
 
-        let balance1 = psbt_detail(0, &psbt, &my_scripts, network).unwrap();
         let txid = "981e91290b2f05d8b5e16d93d7ffe180595c16e19acbcb6e721399d9ae56bb45";
         let txid = Txid::from_str(txid).unwrap();
         assert_eq!(
-            balance0,
+            balance,
             PsbtDetail {
                 i: 0,
                 txid: txid.clone(),
                 lock_time: absolute::LockTime::from_height(0).unwrap(),
-                descriptors: vec!["tr(tpubD6NzVbkrYhZ4XUprtHTHAWupukJFpWBJBBU9pyp62LVMhxnpb1dqDouxv5m2MTTAuWzLvFQmtgWwzHCFTrVXi1HscGm1BZ2xuGDN5KL4zNF/0/*)#xq5v4q9d".to_string()],
-                outgoing: Amount::from_btc(50.0).unwrap(),
-                incoming: Amount::from_sat(0),
-                fee: Amount::from_sat(1420),
-                inputs: vec!["in  0:  50.000000000 8820c0dc3275d84c241ce7025e45a523340034fd245297448381aec0411ae2bb:0 *".to_string()],
-                outputs: vec!["out 0:   0.001000000 bcrt1qzuszgwlscs7awaj9rhlvm6kk4ajvxuf4qs9ue9".to_string(),"out 1:  49.998985800 bcrt1p76yqr3phgr7ratf0tcjszltrztut28v9nd20krquf5y2qq342ylqfv0qfu".to_string()],
-            }
-        );
-        assert_eq!(
-            balance1,
-            PsbtDetail {
-                i: 0,
-                txid,
-                lock_time: absolute::LockTime::from_height(0).unwrap(),
-                descriptors: my_scripts.descriptors().to_vec(),
+                descriptors: vec!["tr(tpubD6NzVbkrYhZ4XUprtHTHAWupukJFpWBJBBU9pyp62LVMhxnpb1dqDouxv5m2MTTAuWzLvFQmtgWwzHCFTrVXi1HscGm1BZ2xuGDN5KL4zNF/0/*)#xq5v4q9d".to_string(), "tr(tpubD6NzVbkrYhZ4XUprtHTHAWupukJFpWBJBBU9pyp62LVMhxnpb1dqDouxv5m2MTTAuWzLvFQmtgWwzHCFTrVXi1HscGm1BZ2xuGDN5KL4zNF/1/*)#h53dg444".to_string()],
                 outgoing: Amount::from_btc(50.0).unwrap(),
                 incoming: Amount::from_btc(49.99898580).unwrap(),
                 fee: Amount::from_sat(1420),
                 inputs: vec!["in  0:  50.000000000 8820c0dc3275d84c241ce7025e45a523340034fd245297448381aec0411ae2bb:0 *".to_string()],
                 outputs: vec!["out 0:   0.001000000 bcrt1qzuszgwlscs7awaj9rhlvm6kk4ajvxuf4qs9ue9".to_string(),"out 1:  49.998985800 bcrt1p76yqr3phgr7ratf0tcjszltrztut28v9nd20krquf5y2qq342ylqfv0qfu *".to_string()],
-
             }
         );
 
-        let balances =
-            psbt_details(&[psbt.clone()], &[desc0.clone(), desc1.clone()], network).unwrap();
+        let balances = psbt_details(&[psbt.clone()], desc.clone(), network).unwrap();
         assert_eq!(
             balances,
             GroupDetail {
@@ -278,7 +252,7 @@ mod test {
                 incoming: Amount::from_btc(49.99898580).unwrap(),
                 fee: Amount::from_sat(1420),
 
-                details: vec![balance1],
+                details: vec![balance],
             }
         );
 
@@ -296,12 +270,7 @@ net  :  -0.001014200
         let actual = balances.to_string();
         assert_eq!(balances.to_string(), expected, "\n{}\n{}", actual, expected);
 
-        let balances2 = psbt_details(
-            &[psbt.clone(), psbt.clone()],
-            &[desc0.clone(), desc1.clone()],
-            network,
-        )
-        .unwrap();
+        let balances2 = psbt_details(&[psbt.clone(), psbt.clone()], desc, network).unwrap();
         let actual = balances2.to_string();
         let expected = r#"tx  0:               981e91290b2f05d8b5e16d93d7ffe180595c16e19acbcb6e721399d9ae56bb45
 lockt:               0
@@ -334,7 +303,6 @@ net  :  -0.002028400
     fn test_many_derivations() {
         let desc0: &str = "tr(tpubD6NzVbkrYhZ4X2WmBwDRV6ADRP3PEo5ojs87nQ961SCKZ3MgWxuWUAzCcnzBYJAPGcnCbgn7oKeAyMvaVzWEYrhzK6n6QvTioRZ5SXTWgLi/0/*)";
         let desc0: Descriptor = desc0.parse().unwrap();
-        let mut set = MyScripts::new(10_000);
-        set.add(&desc0).unwrap();
+        let _ = MyScripts::new(desc0, 10_000).unwrap();
     }
 }
