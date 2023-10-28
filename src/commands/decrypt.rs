@@ -45,7 +45,7 @@ mod test {
         let expected = CODEX_32;
 
         let seed = Seed::from_str(expected).unwrap();
-        commands::identity(&seed, bitcoin::Network::Regtest).unwrap()
+        commands::identity(&seed).unwrap()
     }
 
     #[test]

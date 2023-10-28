@@ -51,6 +51,7 @@ pub fn setup_node() -> TestNode {
 pub struct TestWallets {
     pub signer: Client,
     pub watch_only: Client,
+    pub heir_watch_only: Client,
 }
 
 /// Creates two wallets in the node: "watch_only" and "signer".
@@ -64,32 +65,45 @@ pub struct TestWallets {
 fn setup_wallets(node: &BitcoinD) -> TestWallets {
     let core_connect: CoreConnect = (node, Network::Regtest).into();
 
-    let desc = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)";
-    commands::import(&core_connect, desc, "watch_only", false).unwrap();
-
-    let desc = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
+    let desc = "tr([01e0b4da/86h/1h/0h]tprv8fXspLN8b22B19ViogBWdGHR4ZHkoUd7VvMpoUZCkPZtHiKLZyc9H9pgfTnZwrosXQ5hKLTdSCPerVrgtewQjTSRy1YEngEZXHNCvTodhtz/<0;1>/*)";
     commands::import(&core_connect, desc, "signer", true).unwrap();
 
-    let watch_only = core_connect.client_with_wallet("watch_only").unwrap();
+    let desc = "tr([01e0b4da/86h/1h/0h]tpubDCDuxkQNjPhqtcXWhKr72fwXdaogxop25Dxc5zbWAfNH8Ca7CNRjTeSYqZVA87gW4e8MY9ZcgNCMYrBLyGSRzrCJfEwh6ekK81A2KQPwn4X/<0;1>/*)";
+    commands::import(&core_connect, desc, "watch_only", false).unwrap();
+
+    let desc = "tr([01e0b4da/86h/1h/1h]tpubDCDuxkQNjPhqtq5ARHKc6t5QPg8CUyqJ6uzVkLqDBQtJ47Fac1JwrMUN9Zr6c3dAD5bGxL3DihfZUisSuszupSLoanydKxT8giNcVJSo2vq/<0;1>/*)";
+    commands::import(&core_connect, desc, "heir_watch_only", false).unwrap();
+
     let signer = core_connect.client_with_wallet("signer").unwrap();
+    let watch_only = core_connect.client_with_wallet("watch_only").unwrap();
+    let heir_watch_only = core_connect.client_with_wallet("watch_only").unwrap();
 
     let address = watch_only
         .get_new_bech32m_address(bitcoin::Network::Regtest)
         .unwrap();
     assert_eq!(
         address.to_string(),
-        "bcrt1pr3sacyj3hs2a4lnwq6zyeqw94ftm08kghvzjfge89gqdgz3lvuxs2jc7fh"
+        "bcrt1pccadr74cd29xf5y0eax2dwnfvjeqwa65c9h09f7cw6c2h6c7rjyswwdgx4"
     );
     let address_signer = signer
         .get_new_bech32m_address(bitcoin::Network::Regtest)
         .unwrap();
     assert_eq!(address, address_signer);
 
+    let address_heir_watch_only = heir_watch_only
+        .get_new_bech32m_address(bitcoin::Network::Regtest)
+        .unwrap();
+    assert_ne!(address, address_heir_watch_only);
+
     node.client.generate_to_address(101, &address).unwrap();
 
     signer.wallet_lock();
 
-    TestWallets { signer, watch_only }
+    TestWallets {
+        signer,
+        watch_only,
+        heir_watch_only,
+    }
 }
 
 pub struct TestEnv {

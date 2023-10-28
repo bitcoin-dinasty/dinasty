@@ -3,11 +3,10 @@ use std::str::FromStr;
 use age::x25519::Identity;
 use bitcoin::{
     bech32::{self, ToBase32, Variant},
-    hashes::{sha256, Hash},
-    Network,
+    hashes::{sha256d, Hash},
 };
 
-use crate::{xpub_compatibility, IncompatibleNetwork};
+use crate::IncompatibleNetwork;
 
 use super::Seed;
 
@@ -28,10 +27,9 @@ pub enum IdentityError {
     IncompatibleNetwork(#[from] IncompatibleNetwork),
 }
 
-pub fn identity(seed: &Seed, network: Network) -> Result<Identity, IdentityError> {
-    let xprv = seed.xprv(network)?;
-    xpub_compatibility(network, xprv.network)?;
-    let hash = sha256::Hash::hash(xprv.to_string().as_bytes())
+pub fn identity(seed: &Seed) -> Result<Identity, IdentityError> {
+    let mnemonic = seed.mnemonic();
+    let hash = sha256d::Hash::hash(mnemonic.to_string().as_bytes())
         .as_byte_array()
         .to_vec();
 
@@ -59,16 +57,16 @@ mod test {
 
         assert_eq!(seed.fingerprint().unwrap().to_string(), "8335dcdb");
 
-        let id = identity(&seed, bitcoin::Network::Regtest).unwrap();
+        let id = identity(&seed).unwrap();
 
         assert_eq!(
             id.to_string().expose_secret(),
-            "AGE-SECRET-KEY-15QHD8RZNETCHKLMUVF4PT66N38Z9WDMK92DCQKJ78K4NZQ6823CQAUVPE5"
+            "AGE-SECRET-KEY-1TZTJ6VGVHFE2703MUX0RW0TS9A4GPPPSFJKXFRW863NQYT7E295SWL07QS"
         );
 
         assert_eq!(
             id.to_public().to_string(),
-            "age1kjaz342hey4e9r2zj5xqrju4hapzayqn05zplcur9vkp9ycmsp5qlcjxek"
+            "age1qqly9jy2g3gfykzdnnegrjg3zpcsd086ckcllzlppaqw59puxy7q4a4asf"
         );
     }
 }

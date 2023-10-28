@@ -67,7 +67,7 @@ impl std::fmt::Display for Seed {
 }
 
 impl Seed {
-    fn as_mnemonic(&self) -> Mnemonic {
+    pub fn mnemonic(&self) -> Mnemonic {
         match self {
             Seed::Mnemonic(e) => e.clone(),
             Seed::Codex32(e) => {
@@ -76,7 +76,7 @@ impl Seed {
         }
     }
     pub fn xprv(&self, network: Network) -> Result<ExtendedPrivKey, bitcoin::bip32::Error> {
-        let mnemonic = self.as_mnemonic();
+        let mnemonic = self.mnemonic();
         ExtendedPrivKey::new_master(network, &mnemonic.to_seed(""))
     }
 

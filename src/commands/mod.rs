@@ -69,11 +69,13 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// let stdin = "ms10leetst9q78hvegp0h6xfpc49asgsdaj9kpya2jkr9pfehf6awv43ep4sqjf0ucdd53raxd";
     /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --account 0");
-    /// assert_eq!(stdout, "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)");
+    /// assert_eq!(stdout, "tr([01e0b4da/86h/1h/0h]tprv8fXspLN8b22B19ViogBWdGHR4ZHkoUd7VvMpoUZCkPZtHiKLZyc9H9pgfTnZwrosXQ5hKLTdSCPerVrgtewQjTSRy1YEngEZXHNCvTodhtz/<0;1>/*)");
     /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --public --account 0");
-    /// assert_eq!(stdout, "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)");
+    /// assert_eq!(stdout, "tr([01e0b4da/86h/1h/0h]tpubDCDuxkQNjPhqtcXWhKr72fwXdaogxop25Dxc5zbWAfNH8Ca7CNRjTeSYqZVA87gW4e8MY9ZcgNCMYrBLyGSRzrCJfEwh6ekK81A2KQPwn4X/<0;1>/*)");
     /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --account 1");
-    /// assert_eq!(stdout, "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)");
+    /// assert_eq!(stdout, "tr([01e0b4da/86h/1h/1h]tprv8fXspLN8b22B1N3NXdf1hURHpecGKeePXcPiTpnum95uDczoycVMfrrVyRLpgdhRrxwLZNoEz1DrRf712VBu5qmoPtLsjcqv4GTctGjb1fL/<0;1>/*)");
+    /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --public --account 1");
+    /// assert_eq!(stdout, "tr([01e0b4da/86h/1h/1h]tpubDCDuxkQNjPhqtq5ARHKc6t5QPg8CUyqJ6uzVkLqDBQtJ47Fac1JwrMUN9Zr6c3dAD5bGxL3DihfZUisSuszupSLoanydKxT8giNcVJSo2vq/<0;1>/*)");
     /// ```
     #[clap(verbatim_doc_comment)]
     Descriptor {
@@ -85,16 +87,15 @@ pub enum Commands {
         account: u16,
     },
 
-    /// Create an age recipient from a key
+    /// Create an age recipient or identity from a key
     ///
     /// ```
     /// # use dinasty::test_util::*;
     /// let stdin = "flock audit wash crater album salon goose december envelope scissors lock suit render endorse prevent radio expose defy squirrel into grace broken culture burden";
-
     /// let stdout = sh(&stdin, "dinasty -n regtest identity");
-    /// assert_eq!(stdout, "age1us3jpg4exjj2nenj5vwkns7cnnldhj48hdzvey0u5gt6dlss3vss4qdf6w");
+    /// assert_eq!(stdout, "age16unvc0en3dcageh7vqtdj2cvmgzp57uz5zp7pz4rllagcdr2v58scwpffw");
     /// let stdout = sh(&stdin, "dinasty -n regtest identity --private");
-    /// assert_eq!(stdout, "AGE-SECRET-KEY-1SQQPGC243W5CFU9PJL2K46PTQ8UZCH8AA6NYT7RT36P5720WK48QY7T6XL");
+    /// assert_eq!(stdout, "AGE-SECRET-KEY-1FPURSK70MHN40TSPY7Q546WPJVLS0FS8V3H6XJU3CDX5D3UDM9ZQT4L4MN");
     /// ```
     #[clap(verbatim_doc_comment)]
     Identity {
@@ -112,12 +113,16 @@ pub enum Commands {
     /// ```
     /// # use dinasty::test_util::*;
     /// # let TestNode { node, core_connect_params, .. } = setup_node();
-    /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
+    /// let stdin = "tr([01e0b4da/86h/1h/0h]tprv8fXspLN8b22B19ViogBWdGHR4ZHkoUd7VvMpoUZCkPZtHiKLZyc9H9pgfTnZwrosXQ5hKLTdSCPerVrgtewQjTSRy1YEngEZXHNCvTodhtz/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name signer --with-private-keys")).to_string();
     /// assert!(stdout.contains("ok"));
     ///
-    /// let stdin = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)";
+    /// let stdin = "tr([01e0b4da/86h/1h/0h]tpubDCDuxkQNjPhqtcXWhKr72fwXdaogxop25Dxc5zbWAfNH8Ca7CNRjTeSYqZVA87gW4e8MY9ZcgNCMYrBLyGSRzrCJfEwh6ekK81A2KQPwn4X/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name watch_only")).to_string();
+    /// assert!(stdout.contains("ok"));
+    ///
+    /// let stdin = "tr([01e0b4da/86h/1h/1h]tpubDCDuxkQNjPhqtq5ARHKc6t5QPg8CUyqJ6uzVkLqDBQtJ47Fac1JwrMUN9Zr6c3dAD5bGxL3DihfZUisSuszupSLoanydKxT8giNcVJSo2vq/<0;1>/*)";
+    /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} import --wallet-name heir_watch_only")).to_string();
     /// assert!(stdout.contains("ok"));
     /// ```
     ///
@@ -132,8 +137,6 @@ pub enum Commands {
         with_private_keys: bool,
     },
 
-    Ping,
-
     /// For every old UTXO creates a locktimed transaction to another wallet
     ///
     /// Connects to a local instance of bitcoin core, for every UTXO in `wallet_name` creates
@@ -146,8 +149,7 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// # let TestEnv { node, node_address, core_connect_params, watch_only, signer, .. } = setup_node_and_wallets();
     /// # assert_eq!(node.client.get_blockchain_info().unwrap().blocks, 101);
-    /// # let heir_public_descriptor = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/0/*)#04qa3cn0";
-    /// let stdout = sh("", &format!("dinasty {core_connect_params} locktime -w watch_only --locktime-future 200 --to-public-descriptor {heir_public_descriptor}"));
+    /// let stdout = sh("", &format!("dinasty {core_connect_params} locktime --locktime-future 200 --from-wallet-name watch_only --to-wallet-name heir_watch_only"));
     /// let signed_psbt = stdout.to_psbts().unwrap()[0].clone();
     /// let tx = signed_psbt.extract_tx();
     /// assert_eq!(tx.lock_time, bitcoin::absolute::LockTime::from_height(301).unwrap());
@@ -156,7 +158,7 @@ pub enum Commands {
     #[clap(verbatim_doc_comment)]
     Locktime {
         /// The name of the already existing wallet in bitcoin core used as source of UTXOs
-        #[arg(short, long, required = true)]
+        #[arg(long, required = true)]
         from_wallet_name: String,
 
         /// Recipient addresses of the created transactions will be created to this wallet_name
@@ -209,7 +211,7 @@ pub enum Commands {
     /// # let mut file = tempfile::NamedTempFile::new().unwrap();
     /// # std::fs::write(&file, psbt).unwrap();
     /// # let psbt_file_path = file.path().display();
-    /// let stdin = "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)";
+    /// let stdin = "tr([01e0b4da/86h/1h/0h]tprv8fXspLN8b22B19ViogBWdGHR4ZHkoUd7VvMpoUZCkPZtHiKLZyc9H9pgfTnZwrosXQ5hKLTdSCPerVrgtewQjTSRy1YEngEZXHNCvTodhtz/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty {core_connect_params} sign -w signer --psbt-file {psbt_file_path}"));
     /// let signed_psbts = stdout;
     /// let tx = signed_psbts.to_psbts().unwrap()[0].clone().extract_tx();
@@ -259,7 +261,7 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// # let TestEnv { node, node_address, core_connect_params, watch_only, .. } = setup_node_and_wallets();
     /// # let stdin = watch_only.prepare_psbt_to(&node_address, 10_000).unwrap();
-    /// let desc = "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)";
+    /// let desc = "tr([01e0b4da/86h/1h/0h]tpubDCDuxkQNjPhqtcXWhKr72fwXdaogxop25Dxc5zbWAfNH8Ca7CNRjTeSYqZVA87gW4e8MY9ZcgNCMYrBLyGSRzrCJfEwh6ekK81A2KQPwn4X/<0;1>/*)";
     /// let stdout = sh(&stdin, &format!("dinasty details --descriptor {desc}"));
     /// assert_eq!(stdout.to_string().split("\n").skip(9).next().unwrap(), "net  :  -0.000114200");
     /// ```
@@ -300,14 +302,14 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// # let plain_text = "plain text";
     /// # let stdin = plain_text;
-    /// # let stdout = sh(&stdin, "dinasty encrypt -r age18addpm2vs78d96jg39yc3d2dehtzfef75nh8c6xtz5xejk6l3svs8c8kkl");
+    /// # let stdout = sh(&stdin, "dinasty encrypt -r age16unvc0en3dcageh7vqtdj2cvmgzp57uz5zp7pz4rllagcdr2v58scwpffw");
     /// # let mut file = tempfile::NamedTempFile::new().unwrap();
     /// # std::fs::write(&file, stdout).unwrap();
     /// # let encrypted_file_path = file.path().display();
-    /// let stdin = "AGE-SECRET-KEY-18ZTCPKR7N22AGJYXFW5ATW6SQW2X74HCV37A686UG0ZP9MX6LF2SRHF78N";
+    /// let stdin = "AGE-SECRET-KEY-1FPURSK70MHN40TSPY7Q546WPJVLS0FS8V3H6XJU3CDX5D3UDM9ZQT4L4MN"; // as created in the Identity example
     /// let stdout = sh(&stdin, &format!("dinasty decrypt {encrypted_file_path}"));
     /// assert_eq!(stdout, plain_text);
-    /// let stdin = "[01e0b4da/0']xprv9tuwrYmA3h7J173Z81dhZjd59kZARcnJrS9M3THjWdGqp4RUU8jB5Vk48hZYDKUoRpYKfDxR5ytaBYaUn4pF5RiZbPyENrvTuhWtuXjT8AM";
+    /// let stdin = "flock audit wash crater album salon goose december envelope scissors lock suit render endorse prevent radio expose defy squirrel into grace broken culture burden";
     /// let stdout = sh(&stdin, &format!("dinasty decrypt {encrypted_file_path}"));
     /// assert_eq!(stdout, plain_text);
     /// ```
@@ -340,9 +342,7 @@ pub enum Commands {
     },
 
     #[clap(hide = true)]
-    GenerateCompletion {
-        shell: Shell,
-    },
+    GenerateCompletion { shell: Shell },
 }
 
 #[derive(Debug, Args)]

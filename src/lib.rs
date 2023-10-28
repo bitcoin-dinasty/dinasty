@@ -3,7 +3,6 @@
 use age::{secrecy::ExposeSecret, x25519::Identity};
 use anyhow::Context;
 use bitcoin::Network;
-use bitcoind::bitcoincore_rpc::RpcApi;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 use commands::{Commands, CoreConnectOptional, Seed};
@@ -123,7 +122,7 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
             let seed = Seed::from_str(&key)?;
 
-            let identity = commands::identity(&seed, cli.network)?;
+            let identity = commands::identity(&seed)?;
             if private {
                 identity
                     .to_string()
@@ -150,9 +149,10 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
                     let seed = Seed::from_str(&str).with_context(|| {
                         format!("input: '{str}' failed to parse as identity ({id_e}) or as seed")
                     })?;
-                    commands::identity(&seed, cli.network)?
+                    commands::identity(&seed)?
                 }
             };
+            dbg!(&identity.to_string().expose_secret());
 
             let file_content = std::fs::read_to_string(encrypted_file)?;
             commands::decrypt(&file_content, &identity)?
@@ -201,16 +201,6 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
 
             balances.to_string().as_bytes().to_vec()
         }
-        Commands::Ping => {
-            let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
-            if core_connect.client()?.ping().is_ok() {
-                "ok\n"
-            } else {
-                "ko\n"
-            }
-            .as_bytes()
-            .to_vec()
-        }
     })
 }
 
@@ -218,14 +208,6 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
 pub struct IncompatibleNetwork {
     left: Network,
     right: Network,
-}
-fn xpub_compatibility(left: Network, right: Network) -> Result<(), IncompatibleNetwork> {
-    match (left, right) {
-        (Network::Bitcoin, Network::Bitcoin) => Ok(()),
-        (_, Network::Bitcoin) => Err(IncompatibleNetwork { left, right }),
-        (Network::Bitcoin, _) => Err(IncompatibleNetwork { left, right }),
-        _ => Ok(()),
-    }
 }
 impl Display for IncompatibleNetwork {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
