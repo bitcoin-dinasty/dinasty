@@ -1,6 +1,6 @@
 use crate::{create_random_extended, setup};
 use bitcoin::{bip32::ExtendedPubKey, secp256k1::Secp256k1, Amount, Network};
-use bitcoind::bitcoincore_rpc::RpcApi;
+use bitcoind::bitcoincore_rpc::{jsonrpc::serde_json::Value, RpcApi};
 use dinasty::client_ext::ClientExt;
 use std::collections::HashMap;
 
@@ -28,6 +28,7 @@ fn offline_sign() {
         .unwrap();
     wo_client.import_descriptor(&wo_desc, false).unwrap();
     wo_client.import_descriptor(&wo_desc_change, true).unwrap();
+    let value: Value = wo_client.call("listdescriptors", &[]).unwrap();
     let first_wo = wo_client.get_new_bech32m_address(Network::Regtest).unwrap();
 
     // setup offline signer wallet

@@ -15,7 +15,7 @@ use bitcoind::bitcoincore_rpc::{
     RpcApi,
 };
 
-use crate::{core_connect::CoreConnect, Descriptor};
+use crate::{client_ext::ClientExt, core_connect::CoreConnect, Descriptor};
 
 #[derive(thiserror::Error, Debug)]
 pub enum LocktimeError {
@@ -52,19 +52,29 @@ pub enum LocktimeError {
 
 pub fn locktime(
     core_connect: &CoreConnect,
-    wallet_name: &str,
-    heir_wo_descriptor: &Descriptor,
+    from_wallet_name: &str,
+    to_wallet_name: &str,
     locktime_future: i64,
 ) -> Result<Vec<PartiallySignedTransaction>, LocktimeError> {
-    let client = core_connect.client_with_wallet(wallet_name)?;
-
+    let client_from = core_connect.client_with_wallet(from_wallet_name)?;
+    let client_to = core_connect.client_with_wallet(to_wallet_name)?;
+    let client_to_descriptors = client_to.list_descriptors(to_wallet_name)?;
+    let client_to_external_desc: Vec<_> = client_to_descriptors
+        .iter()
+        .filter(|e| !e.internal)
+        .map(|e| e.desc.to_string())
+        .collect();
+    assert!(client_to_external_desc.len() == 1);
+    let client_to_descriptor = client_to_external_desc.first().unwrap();
+    let client_to_descriptor: Descriptor = client_to_descriptor.parse()?;
     let mut vec = vec![];
     for i in 0..1_000 {
-        let derived = heir_wo_descriptor.at_derivation_index(i)?;
+        // TODO same range as core
+        let derived = client_to_descriptor.at_derivation_index(i)?;
         vec.push(derived.address(core_connect.network)?);
     }
 
-    let list_unspent = client.list_unspent(None, None, None, None, None)?;
+    let list_unspent = client_from.list_unspent(None, None, None, None, None)?;
     let list_unspent_outpoints: HashSet<_> = list_unspent
         .iter()
         .map(|u| OutPoint::new(u.txid, u.vout))
@@ -79,8 +89,9 @@ pub fn locktime(
             let current = heir_addresses
                 .next()
                 .ok_or(LocktimeError::NotEnoughAddresses)?;
-            let info = client.get_address_info(current)?;
-            // assert!(info.is_mine.unwrap_or(false)); // TODO client with heir descriptor
+            let info = client_from.get_address_info(current)?;
+            let receiver_info = client_to.get_address_info(current)?;
+            assert!(receiver_info.is_mine.unwrap_or(false));
             if let Some(GetAddressInfoResultLabel::Simple(label)) = info.labels.first() {
                 if let Ok(outpoint) = OutPoint::from_str(label) {
                     if list_unspent_outpoints.contains(&outpoint) {
@@ -106,19 +117,19 @@ pub fn locktime(
             ..Default::default()
         };
 
-        let blockchain_info = client.get_blockchain_info()?;
+        let blockchain_info = client_from.get_blockchain_info()?;
         if blockchain_info.initial_block_download == true {
             return Err(LocktimeError::StillIBD);
         }
         let locktime = blockchain_info.blocks as i64 + locktime_future;
 
-        let psbt = client
+        let psbt = client_from
             .wallet_create_funded_psbt(&[input], &outputs, Some(locktime), Some(options), None)
             .unwrap();
         let t = PartiallySignedTransaction::from_str(&psbt.psbt)?;
 
         let outpoint = OutPoint::new(unspent.txid, unspent.vout);
-        client.set_label(output_address, &outpoint.to_string())?;
+        client_from.set_label(output_address, &outpoint.to_string())?;
 
         let fee = psbt.fee;
         log::info!("{outpoint} {amount} -> {output_address} fee:{fee} locktime:{locktime_future}");
@@ -131,7 +142,7 @@ pub fn locktime(
 
 #[cfg(test)]
 mod test {
-    use crate::{client_ext::ClientExt, commands, test_util::TestNode, Descriptor};
+    use crate::{client_ext::ClientExt, commands, test_util::TestNode};
     use bitcoin::Network;
     use bitcoind::bitcoincore_rpc::RpcApi;
 
@@ -147,12 +158,12 @@ mod test {
 
         let owner_wo_desc = "tr([8335dcdb/48'/1'/0'/2']tpubDFMWwgXwDVet5E1HvX6h9m32ggTVefxLv7cCjCcEUYsZXqdroHmtMVzzE9RcbwgWa5rCXnZqFXxtKvH7JB5JkTgsNdYdgc1nWJFXHj26ux1/<0;1>/*)";
 
-        let heir_wo_desc = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/0/*)";
-        let heir_wo_desc = node.client.add_checksum(heir_wo_desc).unwrap();
-        let heir_wo_desc: Descriptor = heir_wo_desc.parse().unwrap();
+        let heir_wo_desc = "tr([01e0b4da/1']tpubD8GvnJ7jbLd3ZCmUUoTwDMpQ5N7sVv2HjW4sBgBss7zeEm8mPPSxDmDxYy4rxGZbQAcbRGwawzXMUpnLAnHcrNmZcqucy3qAyn7NZzKChpx/<0;1>/*)";
 
         commands::import(&core_connect, owner_wo_desc, "wo", false).unwrap();
         commands::import(&core_connect, owner_desc, "signer", true).unwrap();
+
+        commands::import(&core_connect, heir_wo_desc, "heir", false).unwrap();
 
         let wo_client = core_connect.client_with_wallet("wo").unwrap();
         let signer_client = core_connect.client_with_wallet("signer").unwrap();
@@ -167,7 +178,7 @@ mod test {
         node.client.generate_to_address(1, &first).unwrap();
         node.client.generate_to_address(100, &node_address).unwrap();
 
-        let psbts = commands::locktime(&core_connect, "wo", &heir_wo_desc, 500).unwrap();
+        let psbts = commands::locktime(&core_connect, "wo", "heir", 500).unwrap();
 
         node.client.generate_to_address(450, &node_address).unwrap();
 

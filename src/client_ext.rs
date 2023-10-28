@@ -8,6 +8,7 @@ use bitcoind::bitcoincore_rpc::{
     jsonrpc::serde_json::{to_value, Value},
     Auth, Client, Error, RpcApi,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{core_connect::CoreConnect, psbts_serde};
 
@@ -39,6 +40,8 @@ pub trait ClientExt {
     ) -> Result<Vec<bool>, Error>;
 
     fn prepare_psbt_to(&self, address: &Address, satoshi: u64) -> Result<Vec<u8>, Error>;
+
+    fn list_descriptors(&self, wallet_name: &str) -> Result<Vec<DescriptorElement>, Error>;
 }
 
 impl ClientExt for Client {
@@ -140,4 +143,36 @@ impl ClientExt for Client {
         let psbt: PartiallySignedTransaction = psbt.psbt.parse().unwrap();
         Ok(psbts_serde::serialize(&[psbt]))
     }
+
+    fn list_descriptors(&self, wallet_name: &str) -> Result<Vec<DescriptorElement>, Error> {
+        // let value: Value = self.call("listdescriptors", &[])?;
+        // assert!(value.get("wallet_name").unwrap().as_str().unwrap() == wallet_name);
+        // let descriptors = value.get("descriptors").unwrap().as_array().unwrap();
+        // let mut result = vec![];
+        // for desc in descriptors {
+        //     let internal = desc.get("internal").unwrap().as_bool().unwrap();
+        //     let desc_str = desc.get("desc").unwrap().as_str().unwrap().to_string();
+        //     result.push((desc_str, internal));
+        // }
+        // Ok(result)
+        let l: ListDescriptors = self.call("listdescriptors", &[])?;
+        assert!(l.wallet_name == wallet_name);
+        Ok(l.descriptors)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ListDescriptors {
+    pub wallet_name: String,
+    pub descriptors: Vec<DescriptorElement>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DescriptorElement {
+    pub desc: String,
+    pub active: bool,
+    pub internal: bool,
+    pub range: Vec<usize>,
+    pub next: usize,
+    pub next_index: usize,
 }

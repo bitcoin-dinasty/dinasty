@@ -114,10 +114,6 @@ pub enum Commands {
         /// If the flag is provided the descriptor will contain extended public keys instead of extended private keys
         #[arg(long)]
         public: bool,
-
-        /// If the flag is provided the descriptor will contain only the external addresses derivation (`0/*`)
-        #[arg(long)]
-        only_external: bool,
     },
 
     /// Connects to bitcoin core, importing the descriptor given from stdin.
@@ -174,11 +170,11 @@ pub enum Commands {
     Locktime {
         /// The name of the already existing wallet in bitcoin core used as source of UTXOs
         #[arg(short, long, required = true)]
-        wallet_name: String,
+        from_wallet_name: String,
 
-        /// Recipient addresses of the created transactions will be created from this descriptor
+        /// Recipient addresses of the created transactions will be created to this wallet_name
         #[arg(long, required = true)]
-        to_public_descriptor: Descriptor, // TODO to_wallet_name
+        to_wallet_name: String,
 
         /// Default value equals to about 4 years
         #[arg(long, default_value_t = 210_240)]

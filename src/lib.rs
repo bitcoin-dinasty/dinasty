@@ -65,14 +65,11 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
                 .as_bytes()
                 .to_vec()
         }
-        Commands::Descriptor {
-            public,
-            only_external,
-        } => {
+        Commands::Descriptor { public } => {
             let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
             let key = XprvWithSource::from_str(&key)?;
 
-            commands::descriptor(key, public, only_external)?
+            commands::descriptor(key, public)?
                 .to_string()
                 .as_bytes()
                 .to_vec()
@@ -86,15 +83,15 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             psbts_serde::serialize(&psbts)
         }
         Commands::Locktime {
-            wallet_name,
-            to_public_descriptor: heir_descriptor_public,
+            from_wallet_name,
+            to_wallet_name,
             locktime_future,
         } => {
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
             let psbts = commands::locktime(
                 &core_connect,
-                &wallet_name,
-                &heir_descriptor_public,
+                &from_wallet_name,
+                &to_wallet_name,
                 locktime_future,
             )?;
             psbts_serde::serialize(&psbts)
