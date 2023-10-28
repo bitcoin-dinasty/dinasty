@@ -1,23 +1,15 @@
 digraph G {
     
-    subgraph cluster_0 {
-        style=filled;
-        color=lightgrey;
-        label="seed";
-            dices -> codex32 [label=" seed" fontname="Courier"]
-            dices -> mnemonic
-
-    }
-    codex32 -> xprv [label="xkey m/0h" fontname="Courier"]
-    mnemonic -> xprv
-    xprv -> public_descriptor [label=" descriptor --public" fontname="Courier"]
-    xprv -> private_descriptor [label=" descriptor" fontname="Courier"]
-    xprv -> identity [label=" identity --private" fontname="Courier"]
-    xprv -> recipient [label=" identity" fontname="Courier"]
+    dices -> codex32_or_mnemonic [label=" seed" fontname="Courier"]
+    
+    codex32_or_mnemonic -> public_descriptor [label=" descriptor --public" fontname="Courier"]
+    codex32_or_mnemonic -> private_descriptor [label=" descriptor" fontname="Courier"]
+    codex32_or_mnemonic -> identity [label=" identity --private" fontname="Courier"]
+    codex32_or_mnemonic -> recipient [label=" identity" fontname="Courier"]
     
     dices [style=filled, fillcolor="orange"] ;
-    codex32 [style=filled, fillcolor="orange"] ;
-    mnemonic [style=filled, fillcolor="orange"] ;
-    xprv [style=filled, fillcolor="orange"] ;
-    
+    codex32_or_mnemonic [style=filled, fillcolor="orange"] ;
+    private_descriptor [style=filled, fillcolor="yellow"] ;
+    identity [style=filled, fillcolor="yellow"] ;
+
 }

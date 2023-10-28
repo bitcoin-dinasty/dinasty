@@ -33,22 +33,19 @@ pub fn decrypt(armored_cipher_text: &str, identity: &Identity) -> Result<String,
 
 #[cfg(test)]
 mod test {
+
+    use crate::commands::{self, decrypt, encrypt, Seed};
+    use age::x25519::Identity;
     use std::str::FromStr;
 
-    use age::x25519::Identity;
-
-    use crate::{
-        commands::{self, encrypt},
-        key_origin::XprvWithSource,
-    };
-
-    use super::decrypt;
+    pub const CODEX_32: &str =
+        "ms10leetst9q78hvegp0h6xfpc49asgsdaj9kpya2jkr9pfehf6awv43ep4sqjf0ucdd53raxd";
 
     fn mock_identity() -> Identity {
-        let expected = "[8335dcdb/48'/1'/0'/2']tprv8ifUoGVh57yDBkyW2sS6kMNv7ewZVLmSLp1RSgZw4H5AhMP6AtxJB1P842vZcvdu9giYEfWDa6NX5nCGaaUVK5boJt1AeA8fFKv2u87Ua3g";
+        let expected = CODEX_32;
 
-        let key_with_source = XprvWithSource::from_str(expected).unwrap();
-        commands::identity(&key_with_source, bitcoin::Network::Regtest).unwrap()
+        let seed = Seed::from_str(expected).unwrap();
+        commands::identity(&seed, bitcoin::Network::Regtest).unwrap()
     }
 
     #[test]

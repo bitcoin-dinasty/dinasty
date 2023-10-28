@@ -10,10 +10,8 @@ mod qr;
 mod refresh;
 mod seed;
 mod sign;
-mod xkey;
 
 use age::x25519::Recipient;
-use bitcoin::bip32::DerivationPath;
 use clap::{Args, Subcommand};
 use clap_complete::Shell;
 use std::{net::SocketAddrV4, path::PathBuf};
@@ -28,9 +26,8 @@ pub use import::{import, ImportError};
 pub use locktime::{locktime, LocktimeError};
 pub use qr::qr;
 pub use refresh::{refresh, RefreshError};
-pub use seed::{seed, SeedError};
+pub use seed::{seed, Seed, SeedError};
 pub use sign::{sign, SignError};
-pub use xkey::{key, KeyError};
 
 use crate::Descriptor;
 
@@ -66,27 +63,34 @@ pub enum Commands {
         codex32_id: Option<String>,
     },
 
-    /// Given a mnemonic from stdin, prints the xprv derived at the given path
+    /// Given an extended private key and if public or private prints the bip86 descriptor
     ///
     /// ```
     /// # use dinasty::test_util::*;
-    /// let stdin = "flock audit wash crater album salon goose december envelope scissors lock suit render endorse prevent radio expose defy squirrel into grace broken culture burden";
-    /// let stdout = sh(&stdin, "dinasty -n regtest xkey m/0h");
-    /// assert_eq!(stdout, "[01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8");
-    /// let stdout = sh(&stdin, "dinasty -n regtest xkey m/1h");
-    /// assert_eq!(stdout, "[01e0b4da/1']tprv8batdt5VSxwNfjjgb9oLoxAHWLbwLaqPACU5uA9aSrCFQGszkzdN3Gc6Np4tvDfrMw4bELAjRpFXaiL4mmLRncYxbvZd8CxGzEbxGZjL9v1");
+    /// let stdin = "ms10leetst9q78hvegp0h6xfpc49asgsdaj9kpya2jkr9pfehf6awv43ep4sqjf0ucdd53raxd";
+    /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --account 0");
+    /// assert_eq!(stdout, "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)");
+    /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --public --account 0");
+    /// assert_eq!(stdout, "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)");
+    /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --account 1");
+    /// assert_eq!(stdout, "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)");
     /// ```
     #[clap(verbatim_doc_comment)]
-    Xkey {
-        /// The derivation path to derive from the given mnemonic/codex32, example `m/0h`
-        path: DerivationPath,
+    Descriptor {
+        /// If the flag is provided the descriptor will contain extended public keys instead of extended private keys
+        #[arg(long)]
+        public: bool,
+
+        #[arg(long)]
+        account: u16,
     },
 
     /// Create an age recipient from a key
     ///
     /// ```
     /// # use dinasty::test_util::*;
-    /// let stdin = "[01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8";
+    /// let stdin = "flock audit wash crater album salon goose december envelope scissors lock suit render endorse prevent radio expose defy squirrel into grace broken culture burden";
+
     /// let stdout = sh(&stdin, "dinasty -n regtest identity");
     /// assert_eq!(stdout, "age1us3jpg4exjj2nenj5vwkns7cnnldhj48hdzvey0u5gt6dlss3vss4qdf6w");
     /// let stdout = sh(&stdin, "dinasty -n regtest identity --private");
@@ -97,23 +101,6 @@ pub enum Commands {
         /// If the flag is provided the decryption secret key will be printed
         #[arg(long)]
         private: bool,
-    },
-
-    /// Given an extended private key and if public or private prints the descriptor
-    ///
-    /// ```
-    /// # use dinasty::test_util::*;
-    /// let stdin = "[01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8";
-    /// let stdout = sh(&stdin, "dinasty -n regtest descriptor");
-    /// assert_eq!(stdout, "tr([01e0b4da/0']tprv8batdt5VSxwNbvH5naVCjPF4TsyNf8pKBz4TusiBzbmKbfAZTW4vbF7W3sjCDgs7oG56fKaBFLUNeQ8DuHABtUzA83BY3DeWpoGKM9zLYV8/<0;1>/*)");
-    /// let stdout = sh(&stdin, "dinasty -n regtest descriptor --public");
-    /// assert_eq!(stdout, "tr([01e0b4da/0']tpubD8GvnJ7jbLd3VPJsgE9o8nuB2uVJpU1DmHfFCPkVQsZiS9RL5ttWmjjNDzrQWcCy5ntdC8umt4ixDTsL7w9JYhnqKaYRTKH4F7yHVBqwCt3/<0;1>/*)");
-    /// ```
-    #[clap(verbatim_doc_comment)]
-    Descriptor {
-        /// If the flag is provided the descriptor will contain extended public keys instead of extended private keys
-        #[arg(long)]
-        public: bool,
     },
 
     /// Connects to bitcoin core, importing the descriptor given from stdin.

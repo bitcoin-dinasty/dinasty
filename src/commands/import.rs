@@ -113,7 +113,7 @@ mod test {
         } = crate::test_util::setup_node();
         let desc = "tr([8335dcdb/48'/1'/0'/2']tprv8ifUoGVh57yDBkyW2sS6kMNv7ewZVLmSLp1RSgZw4H5AhMP6AtxJB1P842vZcvdu9giYEfWDa6NX5nCGaaUVK5boJt1AeA8fFKv2u87Ua3g/<0;1>/*)";
 
-        let x = commands::import(&core_connect, desc, "1", true).unwrap();
+        let _ = commands::import(&core_connect, desc, "1", true).unwrap();
         let _ = commands::import(&core_connect, desc, "2", false).unwrap_err();
 
         let desc: &str = "tr([8335dcdb/48'/1'/0'/2']tpubDFMWwgXwDVet5E1HvX6h9m32ggTVefxLv7cCjCcEUYsZXqdroHmtMVzzE9RcbwgWa5rCXnZqFXxtKvH7JB5JkTgsNdYdgc1nWJFXHj26ux1/<0;1>/*)";

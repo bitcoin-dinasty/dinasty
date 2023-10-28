@@ -6,9 +6,8 @@ use bitcoin::Network;
 use bitcoind::bitcoincore_rpc::RpcApi;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
-use commands::{Commands, CoreConnectOptional};
+use commands::{Commands, CoreConnectOptional, Seed};
 use error::Error;
-use key_origin::XprvWithSource;
 use std::{fmt::Display, fs, io::Read, str::FromStr};
 use stdin::StdinData;
 
@@ -18,7 +17,6 @@ pub mod client_ext;
 pub mod commands;
 pub mod core_connect;
 pub mod error;
-pub mod key_origin;
 pub mod psbts_serde;
 pub mod stdin;
 pub mod stdout;
@@ -46,15 +44,22 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
         Commands::Seed { codex32_id } => {
             let dices = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
 
-            commands::seed(&dices, codex32_id)?.as_bytes().to_vec()
-        }
-        Commands::Xkey { path } => {
-            let mnemonic_or_codex32 = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
-
-            commands::key(&mnemonic_or_codex32, &path, cli.network)?
+            commands::seed(&dices, codex32_id)?
+                .to_string()
                 .as_bytes()
                 .to_vec()
         }
+
+        Commands::Descriptor { public, account } => {
+            let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
+            let seed = Seed::from_str(&key)?;
+
+            commands::descriptor(seed, cli.network, account, public)?
+                .to_string()
+                .as_bytes()
+                .to_vec()
+        }
+
         Commands::Import {
             wallet_name,
             with_private_keys,
@@ -62,15 +67,6 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             let descriptor = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
             commands::import(&core_connect, &descriptor, &wallet_name, with_private_keys)?
-                .as_bytes()
-                .to_vec()
-        }
-        Commands::Descriptor { public } => {
-            let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
-            let key = XprvWithSource::from_str(&key)?;
-
-            commands::descriptor(key, public)?
-                .to_string()
                 .as_bytes()
                 .to_vec()
         }
@@ -125,9 +121,9 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
 
         Commands::Identity { private } => {
             let key = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
-            let key = XprvWithSource::from_str(&key)?;
+            let seed = Seed::from_str(&key)?;
 
-            let identity = commands::identity(&key, cli.network)?;
+            let identity = commands::identity(&seed, cli.network)?;
             if private {
                 identity
                     .to_string()
@@ -151,10 +147,10 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             let identity = match identity {
                 Ok(identity) => identity,
                 Err(id_e) => {
-                    let xprv = XprvWithSource::from_str(&str).with_context(|| {
-                        format!("input: '{str}' failed to parse as identity ({id_e}) or as xprv")
+                    let seed = Seed::from_str(&str).with_context(|| {
+                        format!("input: '{str}' failed to parse as identity ({id_e}) or as seed")
                     })?;
-                    commands::identity(&xprv, cli.network)?
+                    commands::identity(&seed, cli.network)?
                 }
             };
 

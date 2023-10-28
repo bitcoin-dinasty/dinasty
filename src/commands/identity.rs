@@ -9,12 +9,17 @@ use bitcoin::{
 
 use crate::{xpub_compatibility, IncompatibleNetwork};
 
+use super::Seed;
+
 const SECRET_KEY_PREFIX: &str = "age-secret-key-";
 
 #[derive(thiserror::Error, Debug)]
 pub enum IdentityError {
     #[error(transparent)]
     Bech32(#[from] bech32::Error),
+
+    #[error(transparent)]
+    Bip32(#[from] bitcoin::bip32::Error),
 
     #[error("Identity parsing error {0}")]
     Identity(String),
@@ -23,11 +28,9 @@ pub enum IdentityError {
     IncompatibleNetwork(#[from] IncompatibleNetwork),
 }
 
-pub fn identity(
-    xprv: &crate::key_origin::XprvWithSource,
-    network: Network,
-) -> Result<Identity, IdentityError> {
-    xpub_compatibility(network, xprv.key().network)?;
+pub fn identity(seed: &Seed, network: Network) -> Result<Identity, IdentityError> {
+    let xprv = seed.xprv(network)?;
+    xpub_compatibility(network, xprv.network)?;
     let hash = sha256::Hash::hash(xprv.to_string().as_bytes())
         .as_byte_array()
         .to_vec();
@@ -42,29 +45,30 @@ pub fn identity(
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
-    use age::secrecy::ExposeSecret;
-
     use super::identity;
-    use crate::key_origin::XprvWithSource;
+    use crate::commands::Seed;
+    use age::secrecy::ExposeSecret;
+    use std::str::FromStr;
 
     #[test]
     fn test_identity() {
-        let expected = "[8335dcdb/48'/1'/0'/2']tprv8ifUoGVh57yDBkyW2sS6kMNv7ewZVLmSLp1RSgZw4H5AhMP6AtxJB1P842vZcvdu9giYEfWDa6NX5nCGaaUVK5boJt1AeA8fFKv2u87Ua3g";
+        let seed = Seed::from_str(
+            "alter trial legal chuckle wear mansion sweet invest shy cabin autumn ribbon",
+        )
+        .unwrap();
 
-        let key_with_source = XprvWithSource::from_str(expected).unwrap();
+        assert_eq!(seed.fingerprint().unwrap().to_string(), "8335dcdb");
 
-        let id = identity(&key_with_source, bitcoin::Network::Regtest).unwrap();
+        let id = identity(&seed, bitcoin::Network::Regtest).unwrap();
 
         assert_eq!(
             id.to_string().expose_secret(),
-            "AGE-SECRET-KEY-1CR8RT9HR03CGFMHPZETZCS4MF9R7QQ0K259CEKEZZQ3A075RDPMSNAA4YL"
+            "AGE-SECRET-KEY-15QHD8RZNETCHKLMUVF4PT66N38Z9WDMK92DCQKJ78K4NZQ6823CQAUVPE5"
         );
 
         assert_eq!(
             id.to_public().to_string(),
-            "age1f7ukcx02m6mwfatanmzz75l56cm08890ehgxv9hvfyfpvj3avc2sdlxwn6"
+            "age1kjaz342hey4e9r2zj5xqrju4hapzayqn05zplcur9vkp9ycmsp5qlcjxek"
         );
     }
 }

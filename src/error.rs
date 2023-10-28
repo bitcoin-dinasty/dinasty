@@ -11,12 +11,6 @@ pub enum Error {
     Locktime(#[from] commands::LocktimeError),
 
     #[error(transparent)]
-    Key(#[from] commands::KeyError),
-
-    #[error(transparent)]
-    KeyOrigin(#[from] crate::key_origin::KeyOriginError),
-
-    #[error(transparent)]
     ImportWallet(#[from] commands::ImportError),
 
     #[error(transparent)]
@@ -57,13 +51,6 @@ pub enum Error {
 
     #[error("Stdin is expected for this command")]
     StdinExpected,
-
-    #[error("Decrypt error, cannot parse \"{input}\" neither age identity \"{identity_parse_err}\" nor xprv \"{xprv_parse_err}\"")]
-    DecryptError {
-        input: String,
-        identity_parse_err: String,
-        xprv_parse_err: crate::key_origin::KeyOriginError,
-    },
 
     #[error(transparent)]
     PsbtDecodeError(#[from] psbts_serde::DecodeError),
