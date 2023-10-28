@@ -59,6 +59,11 @@ pub fn locktime(
     let client_from = core_connect.client_with_wallet(from_wallet_name)?;
     let client_to = core_connect.client_with_wallet(to_wallet_name)?;
     let client_to_descriptors = client_to.list_descriptors(to_wallet_name)?;
+    let max_range = *client_to_descriptors
+        .iter()
+        .map(|r| r.range.iter().max().unwrap_or(&0))
+        .max()
+        .unwrap_or(&0) as u32;
     let client_to_external_desc: Vec<_> = client_to_descriptors
         .iter()
         .filter(|e| !e.internal)
@@ -68,8 +73,7 @@ pub fn locktime(
     let client_to_descriptor = client_to_external_desc.first().unwrap();
     let client_to_descriptor: Descriptor = client_to_descriptor.parse()?;
     let mut vec = vec![];
-    for i in 0..1_000 {
-        // TODO same range as core
+    for i in 0..std::cmp::max(1_000, max_range) {
         let derived = client_to_descriptor.at_derivation_index(i)?;
         vec.push(derived.address(core_connect.network)?);
     }
