@@ -64,7 +64,7 @@ The shell command may contains {variable}, those are replaced with the value of 
 
 
 
-![graph](graphviz.svg)  // TODO embed_doc image?
+![graph](graphviz.svg)
 
 
 
@@ -101,23 +101,22 @@ A) `dinasty seed --codex32-id leet | encrypt >seed` piped to encrypted data, act
 
 A) `cat seed | decrypt` put passphrase, will be requested once per session, `killall gpg-agent` to remove it from memory
 
-B) `cat - | encrypt >seed` input MANUALLY the seed from machine A so that the seed is saved in the other machine too
+B) `cat - | encrypt >seed` input MANUALLY the seed from machine A so that the seed is saved in the other machine too (`cat -` waits stdin, when you finish type hit return than ctrl-D )
 
-A,B) `decrypt seed | dinasty xkey m/0h | encrypt >owner_xkey`
 
-A,B) `decrypt owner_key | dinasty descriptor | encrypt >owner_descriptor`  both machine could have signer wallet 
+A,B) `decrypt owner_key | dinasty descriptor --account 0 | encrypt >owner_descriptor`  both machine could have signer wallet 
 
 A,B) `decrypt owner_descriptor | shasum -a 256` take note of descriptor hash, ensure they are the same on A,B
 
-A) `decrypt seed | dinasty xkey m/1h | encrypt >heir_xkey`
+A) `decrypt owner_key | dinasty descriptor --public --account 0 | encrypt >owner_descriptor_public` 
 
-A) `decrypt owner_key | dinasty descriptor --public | encrypt >owner_descriptor_public` 
+A) `decrypt heir_key | dinasty descriptor --account 1 | encrypt >heir_descriptor` 
 
-A) `decrypt heir_key | dinasty descriptor | encrypt >heir_descriptor` 
+A) `decrypt heir_key | dinasty descriptor --public --account 1 | encrypt >heir_descriptor_public` 
 
-A) `decrypt heir_key | dinasty descriptor --public --only-external | encrypt >heir_descriptor_external_public` 
 
-A) `decrypt heir_descriptor_external_public && decrypt owner_descriptor_public`  bring to M
+
+A) `decrypt owner_descriptor_public && decrypt heir_descriptor_public`  bring to M
 
 M) `cat owner_descriptor_public | dinasty import --wallet-name watch_only`
 
@@ -154,8 +153,3 @@ A) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base32 --decode | tee >
 A) `decrypt owner_descriptor | dinasty sign -w signer --psbt-file locktime_to_be_signed | encrypt_to_heir | tee >(shasum -a 256 1>&2) | base32 | dinasty qr` bring back to M, take not hash H_signed_locktime
 
 M) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base32 --decode | tee >(shasum -a 256 1>&2) | cat > locktime_signed_encrypted` check same  H_signed_locktime
-
-
-gpg --import
-gpg --export
-gpg --list-keys --with-subkey-fingerprints
