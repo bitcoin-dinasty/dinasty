@@ -26,12 +26,6 @@ pub enum Error {
     Broadcast(#[from] commands::BroadcastError),
 
     #[error(transparent)]
-    Encrypt(#[from] commands::EncryptError),
-
-    #[error(transparent)]
-    Decrypt(#[from] commands::DecryptError),
-
-    #[error(transparent)]
     Io(#[from] std::io::Error),
 
     #[error(transparent)]

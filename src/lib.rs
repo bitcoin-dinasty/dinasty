@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use age::{secrecy::ExposeSecret, x25519::Identity};
+use age::secrecy::ExposeSecret;
 use anyhow::Context;
 use bitcoin::Network;
 use clap::{CommandFactory, Parser};
@@ -136,30 +136,6 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             } else {
                 format!("{}", identity.to_public()).as_bytes().to_vec()
             }
-        }
-        Commands::Encrypt { recipients } => {
-            let plain_text = stdin.ok_or(Error::StdinExpected)?.to_vec();
-
-            let armored_cipher_text = commands::encrypt(&plain_text, recipients)?;
-            armored_cipher_text.as_bytes().to_vec()
-        }
-        Commands::Decrypt { encrypted_file } => {
-            let str = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
-            let identity = Identity::from_str(&str);
-            let identity = match identity {
-                Ok(identity) => identity,
-                Err(id_e) => {
-                    let seed = Seed::from_str(&str).with_context(|| {
-                        format!("input: '{str}' failed to parse as identity ({id_e}) or as seed")
-                    })?;
-                    commands::identity(&seed)?
-                }
-            };
-
-            let file_content = std::fs::read_to_string(encrypted_file)?;
-            commands::decrypt(&file_content, &identity)?
-                .as_bytes()
-                .to_vec()
         }
         Commands::Qr {
             qr_version,

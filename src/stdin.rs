@@ -68,7 +68,6 @@ impl Commands {
         match self {
             Commands::Locktime { .. }
             | Commands::Refresh { .. }
-            | Commands::Encrypt { .. }
             | Commands::GenerateCompletion { .. } => false,
             _ => true,
         }

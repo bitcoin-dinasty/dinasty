@@ -168,22 +168,29 @@ A,B) `bitcoind --daemon`
 A,B) `bitcoin-cli getnewaddress first bech32m` ensure they are the same and equal to address F
 
 
-
-### Setupe age
-
-
-A) `cat HEIR_DESCRIPTOR_SECRET | decrypt | encrypt_to_online | base32 | dinasty qr` bring to M
-
+### Setup age
 
 A,B) `cat SEED | decrypt | dinasty identity --private | encrypt >AGE_IDENTITY`  write down on multiple sheets, give to trusted parties 
 
 A,B) `cat SEED | decrypt | dinasty identity  | encrypt >age_public`
 
-A,B) check age derive private to same public
+A,B) `alias encrypt_to_age='age --encrypt -r $(cat age_public | decrypt)'`
 
-A,B) `alias encrypt_to_heir='age --encrypt -r $(cat heir_identity_public)'`
+A,B) `alias decrypt_age_file='cat AGE_IDENTITY | decrypt | age --decrypt -i -'`
+
+A,B) `echo prova | encrypt_to_age >/tmp/test && decrypt_age_file /tmp/test` age roundtrip test 
+
+A,B) `cat AGE_IDENTITY | decrypt | encrypt_to_online | base32 | dinasty qr` bring to M 
+
+A,B) `cat age_public | decrypt | encrypt_to_online | base32 | dinasty qr` bring to M 
 
 
+### Bring heir descriptor
+
+A) `cat HEIR_DESCRIPTOR_SECRET | decrypt | encrypt_to_online | base32 | dinasty qr` bring to M 
+
+M) `alias encrypt_to_age='age --encrypt -r $(cat age_public | decrypt)'`
+M) `cat HEIR_DESCRIPTOR_SECRET | gpg --decrypt | encrypt_to_age`
 
 ### Heir descriptor (once)
 

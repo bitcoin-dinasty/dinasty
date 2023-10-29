@@ -1,8 +1,6 @@
 mod broadcast;
-mod decrypt;
 mod descriptor;
 mod details;
-mod encrypt;
 mod identity;
 mod import;
 mod locktime;
@@ -11,16 +9,13 @@ mod refresh;
 mod seed;
 mod sign;
 
-use age::x25519::Recipient;
 use clap::{Args, Subcommand};
 use clap_complete::Shell;
 use std::{net::SocketAddrV4, path::PathBuf};
 
 pub use broadcast::{broadcast, BroadcastError};
-pub use decrypt::{decrypt, DecryptError};
 pub use descriptor::descriptor;
 pub use details::{psbt_details, BalanceError};
-pub use encrypt::{encrypt, EncryptError};
 pub use identity::{identity, IdentityError};
 pub use import::{import, ImportError};
 pub use locktime::{locktime, LocktimeError};
@@ -282,53 +277,6 @@ pub enum Commands {
         /// The public descriptor (multipath) to calculate the net balance against.
         #[arg(long)]
         descriptor: Vec<Descriptor>,
-    },
-
-    /// Encrypt standard input for given recipients using the age protocol
-    ///
-    /// The output is binary encoded in bech32m uppercased string
-    ///
-    /// ```
-    /// # use dinasty::test_util::*;
-    /// let plain_text = "plain text";
-    /// let stdin = plain_text;
-    /// let stdout = sh(&stdin, "dinasty encrypt -r age18addpm2vs78d96jg39yc3d2dehtzfef75nh8c6xtz5xejk6l3svs8c8kkl").to_string();
-    /// assert!(stdout.starts_with("-----BEGIN AGE ENCRYPTED FILE-----"));
-    /// assert!(!stdout.contains(plain_text));
-    /// assert!(stdout.ends_with("-----END AGE ENCRYPTED FILE-----\n"));
-    /// ```
-    #[clap(verbatim_doc_comment)]
-    Encrypt {
-        /// Recipients of encryption, at least one is required.
-        ///
-        /// Must be an age public key like `age18addpm2vs78d96jg39yc3d2dehtzfef75nh8c6xtz5xejk6l3svs8c8kkl`
-        #[arg(short, long, required = true)]
-        recipients: Vec<Recipient>,
-    },
-
-    /// Using an identity or key provided from standard input, decrypt the content of the encrypted_file
-    ///
-    /// Decrypts only plain text which are valid utf8 strings.
-    ///
-    /// ```
-    /// # use dinasty::test_util::*;
-    /// # let plain_text = "plain text";
-    /// # let stdin = plain_text;
-    /// # let stdout = sh(&stdin, "dinasty encrypt -r age16unvc0en3dcageh7vqtdj2cvmgzp57uz5zp7pz4rllagcdr2v58scwpffw");
-    /// # let mut file = tempfile::NamedTempFile::new().unwrap();
-    /// # std::fs::write(&file, stdout).unwrap();
-    /// # let encrypted_file_path = file.path().display();
-    /// let stdin = "AGE-SECRET-KEY-1FPURSK70MHN40TSPY7Q546WPJVLS0FS8V3H6XJU3CDX5D3UDM9ZQT4L4MN"; // as created in the Identity example
-    /// let stdout = sh(&stdin, &format!("dinasty decrypt {encrypted_file_path}"));
-    /// assert_eq!(stdout, plain_text);
-    /// let stdin = "flock audit wash crater album salon goose december envelope scissors lock suit render endorse prevent radio expose defy squirrel into grace broken culture burden";
-    /// let stdout = sh(&stdin, &format!("dinasty decrypt {encrypted_file_path}"));
-    /// assert_eq!(stdout, plain_text);
-    /// ```
-    #[clap(verbatim_doc_comment)]
-    Decrypt {
-        /// The file to be decrypted
-        encrypted_file: PathBuf,
     },
 
     /// Convert the text given on stdin into 1 or more QR codes
