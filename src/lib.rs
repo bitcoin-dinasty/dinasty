@@ -97,7 +97,10 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
         } => {
             let descriptor = stdin.ok_or(Error::StdinExpected)?.to_single_text_line()?;
             let mut file_content = vec![];
-            fs::File::open(&psbt_file)?.read_to_end(&mut file_content)?;
+            fs::File::open(&psbt_file)
+                .with_context(|| format!("cannot open {:?}", &psbt_file))?
+                .read_to_end(&mut file_content)
+                .with_context(|| format!("io error on file {:?}", &psbt_file))?;
 
             let psbts = psbts_serde::deserialize(&file_content)?;
             let core_connect = CoreConnect::try_from((cli.core_connect, cli.network))?;
