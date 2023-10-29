@@ -74,9 +74,22 @@ Use 2 offline devices A and B and another online devices M
 
 Needed executables: `bitcoind`, `gpg`, `dinasty`, `pass`, `age` 
 
-M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/A/gpg-passphrase 24`
+### Pass 
 
-M) `PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm pass generate machine/B/gpg-passphrase 24`
+A pre-setup `pass` tool is required
+
+M) `export PASSWORD_STORE_CHARACTER_SET=1234567890qwertyuiopasdfghjklzxcvbnm`
+
+M) `pass generate dinasty/A-gpg-passphrase`
+
+M) `pass generate dinasty/B-gpg-passphrase`
+
+M) `pass generate dinasty/root`
+
+### New GPG keys
+
+Both A and B contains a newly created GPG key with passphrase saved in pass in the online machine.
+GPG is used so that a session can be used (ask passphrase once, keep decrypting key in volatile memory)
 
 M) `gpg --export <gpg-id> | base32`  # armor is not suitable for barcode reading, base32 is slightly more efficient in QR code and doesn't contain character that are mapped differently in different keyboard layout
 
@@ -86,55 +99,87 @@ A) `gpg --full-generate-key` use machine/A/gpg-passphrase -> eg DEADBEE1
 
 B) `gpg --full-generate-key` use machine/B/gpg-passphrase -> eg DEADBEE2
 
+### Conventions
+
+- any secret material is never clear on disk, always encrypted
+- any secret material is always piped to the command needing it (never passed as argument)
+- any file containing encrypted secret material is UPPERCASED
+- any data passed via QR codes is almost never secret material, the few times is needed is encrypted with a key known to the recipient
+
+### Prepare some alias
+
+Note this alias should be re-called from bash history, because you can't put them in .bashrc in nixos system. You could define environment but
+this should be done at image creation phase, and then you don't know the fingerprint. 
+
 A,B) `alias decrypt='gpg --decrypt'`
 
-A) `alias encrypt='gpg --encrypt -r DEADBEE1' | base32`
+A) `alias encrypt='gpg --encrypt -r DEADBEE1'`
 
-B) `alias encrypt='gpg --encrypt -r DEADBEE2' | base32`
+B) `alias encrypt='gpg --encrypt -r DEADBEE2'`
 
-A,B) `alias encrypt_to_online='gpg --encrypt DEADBEEM' | base32`
-`alias qr=dinasty qr`
+A,B) `alias encrypt_to_online='gpg --encrypt -r DEADBEE3'` may be more convenient to generate the string on the online machine for gpg fingerprint, use pass .gpg-id for reference.
+
+Note you have to bring gpg key information for every public key you use in `encrypt_to_online` with `gpg --export` as seen in previous step and `gpg --import` on the offline machine.
+
+### Seed creation
 
 A,B) `dinasty seed` with the value from examples and check result match
 
-A) `dinasty seed --codex32-id leet | encrypt >seed` piped to encrypted data, actual launch dices, terminated with return and ctrl-d
+A) `dinasty seed --codex32-id dyna | encrypt >SEED` piped to encrypted data, actual launch dices, IMPORTANT, terminate with ctrl-d twice
 
-A) `cat seed | decrypt` put passphrase, will be requested once per session, `killall gpg-agent` to remove it from memory
+A) `cat SEED | decrypt` put passphrase, will be requested once per session, `killall gpg-agent` to remove it from memory
 
-B) `cat - | encrypt >seed` input MANUALLY the seed from machine A so that the seed is saved in the other machine too (`cat -` waits stdin, when you finish type hit return than ctrl-D )
+B) `cat - | encrypt >SEED` input MANUALLY the seed from machine A so that the seed is saved in the other machine too (`cat -` waits stdin, when you finish type hit ctrl-d twice)
 
+A,B) `decrypt SEED | dinasty descriptor --account 0 --public` ensure they are the same on A,B
 
-A,B) `decrypt owner_key | dinasty descriptor --account 0 | encrypt >owner_descriptor`  both machine could have signer wallet 
+### Descriptors creation
 
-A,B) `decrypt owner_descriptor | shasum -a 256` take note of descriptor hash, ensure they are the same on A,B
+A,B) `decrypt SEED | dinasty descriptor --account 0 | encrypt >OWNER_DESCRIPTOR_SECRET`  both machine could have signer wallet 
 
-A) `decrypt owner_key | dinasty descriptor --public --account 0 | encrypt >owner_descriptor_public` 
+A,B) `decrypt SEED | dinasty descriptor --public --account 0 | encrypt >owner_descriptor_public` 
 
-A) `decrypt heir_key | dinasty descriptor --account 1 | encrypt >heir_descriptor` 
+A,B) `decrypt SEED | dinasty descriptor --account 1 | encrypt >HEIR_DESCRIPTOR_SECRET` 
 
-A) `decrypt heir_key | dinasty descriptor --public --account 1 | encrypt >heir_descriptor_public` 
+A,B) `decrypt SEED | dinasty descriptor --public --account 1 | encrypt >heir_descriptor_public` 
 
+### Setup online watch only
 
+A) `cat owner_descriptor_public | decrypt | encrypt_to_online | base32 | dinasty qr`  bring to M as `owner_descriptor_public_base32`
 
-A) `decrypt owner_descriptor_public && decrypt heir_descriptor_public`  bring to M
+M) `cat owner_descriptor_public_base32 | base32 --decode | gpg --decrypt | pass dinasty/owner_descriptor_public`
+
+M) `pass dinasty/owner_descriptor_public | tr -d '\n' | dinasty import --wallet-name owner`
+
+A) `cat heir_descriptor_public | decrypt ~ encrypt_to_online | dinasty qr`
 
 M) `cat owner_descriptor_public | dinasty import --wallet-name watch_only`
 
-M) `bitcoin-cli getnewaddress` take note of the first address F
+M) `bitcoin-cli getnewaddress first bech32m` take note of the first address F
 
-A,B) `decrypt owner_descriptor | dinasty import --wallet-name signer`
+### Setup offline signer
 
-A,B) `bitcoin-cli getnewaddress` ensure they are the same and equal to F
+A,B) `cat owner_descriptor | decrypt | dinasty import --wallet-name signer --with-private-keys`
 
-A) `decrypt heir_descriptor | encrypt_to_online >heir_descriptor_encrypted_to_online` bring to M
+A,B) `echo "networkactive=0 >> .bitcoin/bitcoin.conf"`
+A,B) `bitcoind --daemon`
+A,B) `bitcoin-cli getnewaddress first bech32m` ensure they are the same and equal to address F
 
-A,B) `decrypt heir_key | dinasty identity --private | encrypt heir_identity`  write down on multiple sheets, give to trusted parties 
 
-A,B) `decrypt heir_key | dinasty identity  | encrypt heir_identity_public`
+
+
+
+
+A) `cat HEIR_DESCRIPTOR_SECRET | decrypt | encrypt_to_online | base32 | dinasty qr` bring to M
+
+
+A,B) `cat SEED | decrypt | dinasty identity --private | encrypt > AGE_IDENTITY`  write down on multiple sheets, give to trusted parties 
+
+A,B) `cat SEED | decrypt | dinasty identity  | encrypt age_public`
 
 A,B) check age derive private to same public
 
-A,B) `alias encrypt_to_heir='age --encrypt -r ${cat heir_identity_public}'`
+A,B) `alias encrypt_to_heir='age --encrypt -r $(cat heir_identity_public)'`
 
 ## Heir descriptor (once)
 

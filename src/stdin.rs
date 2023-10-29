@@ -42,7 +42,11 @@ impl StdinData {
 
     pub fn to_multiline_string(self) -> Result<Vec<String>, StdinError> {
         let string = self.to_string()?;
-        Ok(string.split("\n").map(ToString::to_string).collect())
+        Ok(string
+            .split("\n")
+            .map(ToString::to_string)
+            .filter(|s| !s.is_empty())
+            .collect())
     }
     pub fn to_vec(self) -> Vec<u8> {
         self.0
@@ -65,7 +69,9 @@ pub fn read_stdin() -> StdinData {
 impl Commands {
     pub fn needs_stdin(&self) -> bool {
         match self {
-            Commands::Locktime { .. }
+            Commands::BinToBase64
+            | Commands::Base64ToBin
+            | Commands::Locktime { .. }
             | Commands::Refresh { .. }
             | Commands::Encrypt { .. }
             | Commands::GenerateCompletion { .. } => false,

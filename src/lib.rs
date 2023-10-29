@@ -7,7 +7,7 @@ use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 use commands::{Commands, CoreConnectOptional, Seed};
 use error::Error;
-use std::{fmt::Display, fs, io::Read, str::FromStr};
+use std::{fs, io::Read, str::FromStr};
 use stdin::StdinData;
 
 use crate::core_connect::CoreConnect;
@@ -152,7 +152,6 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
                     commands::identity(&seed)?
                 }
             };
-            dbg!(&identity.to_string().expose_secret());
 
             let file_content = std::fs::read_to_string(encrypted_file)?;
             commands::decrypt(&file_content, &identity)?
@@ -177,22 +176,21 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             generate(shell, &mut Cli::command(), "dinasty", &mut result);
             result
         }
-        Commands::Convert { invert: inverted } => {
-            if inverted {
-                let content = stdin.ok_or(Error::StdinExpected)?.to_multiline_string()?;
-                let psbts: Result<Vec<_>, _> = content.iter().map(|e| e.parse()).collect();
-                psbts_serde::serialize(&psbts?)
-            } else {
-                let content = stdin.ok_or(Error::StdinExpected)?.to_vec();
-                let psbts = psbts_serde::deserialize(&content)?;
-                psbts
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join("\n")
-                    .as_bytes()
-                    .to_vec()
-            }
+        Commands::Base64ToBin => {
+            let content = stdin.ok_or(Error::StdinExpected)?.to_multiline_string()?;
+            let psbts: Result<Vec<_>, _> = content.iter().map(|e| e.parse()).collect();
+            psbts_serde::serialize(&psbts?)
+        }
+        Commands::BinToBase64 => {
+            let content = stdin.ok_or(Error::StdinExpected)?.to_vec();
+            let psbts = psbts_serde::deserialize(&content)?;
+            psbts
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n")
+                .as_bytes()
+                .to_vec()
         }
         Commands::Details { descriptor } => {
             let psbts = stdin.ok_or(Error::StdinExpected)?.to_psbts()?;
@@ -202,15 +200,4 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             balances.to_string().as_bytes().to_vec()
         }
     })
-}
-
-#[derive(thiserror::Error, Debug)]
-pub struct IncompatibleNetwork {
-    left: Network,
-    right: Network,
-}
-impl Display for IncompatibleNetwork {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Incompatible networks {} {}", self.left, self.right)
-    }
 }

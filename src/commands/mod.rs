@@ -87,7 +87,7 @@ pub enum Commands {
         account: u16,
     },
 
-    /// Create an age recipient or identity from a key
+    /// Create an age recipient or identity from a seed
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -170,7 +170,7 @@ pub enum Commands {
         locktime_future: i64,
     },
 
-    /// Refresh owned UTXO with the goal of invalidating previously sent presigned transactions
+    /// Refresh owned UTXO with the goal of invalidating previously generated locktimed transactions
     ///
     /// Connects to a local instance of bitcoin core.
     /// For every UTXO older than 'blocks' blocks create a 1-1 transaction to self, prints out a
@@ -202,7 +202,7 @@ pub enum Commands {
         older_than_blocks: u32,
     },
 
-    /// Connects to bitcoin core and signs the psbts given in stdin
+    /// Connects to bitcoin core and signs the given PSBTs.
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -225,37 +225,46 @@ pub enum Commands {
         #[arg(short, long, required = true)]
         wallet_name: String,
 
-        /// file containing one psbt in base64 per line
+        /// file containing one or more psbt in binary format
         #[arg(long, required = true)]
         psbt_file: PathBuf,
     },
 
-    /// Broadcast the PSBTs given on stdin
+    /// Broadcast the PSBTs given from stdin.
     ///
     /// for an example see `Sign` command
     #[clap(verbatim_doc_comment)]
     Broadcast,
 
-    /// Convert the binary PSBTs given from stdin to new-line separated base64, or the opposite.
+    /// Convert the binary PSBTs given from stdin to new-line separated base64
+    ///
+    /// ```
+    /// # use dinasty::test_util::*;
+    /// let stdin = psbts_binary();
+    /// let stdout = sh(&stdin, "dinasty bin-to-base64");
+    /// ```
+    ///
+    #[clap(verbatim_doc_comment)]
+    BinToBase64,
+
+    /// Convert the base64 PSBTs given from stdin to binary PSBTs
     ///
     /// ```
     /// # use dinasty::test_util::*;
     /// let psbts_binary = psbts_binary();
     /// let stdin = psbts_binary.clone();
-    /// let stdout = sh(&stdin, "dinasty convert");
+    /// let stdout = sh(&stdin, "dinasty bin-to-base64");
     /// let stdin = stdout;
-    /// let stdout = sh(&stdin, "dinasty convert --invert").to_psbts().unwrap();
+    /// let stdout = sh(&stdin, "dinasty base64-to-bin").to_psbts().unwrap();
     /// assert_eq!(psbts_binary, dinasty::psbts_serde::serialize(&stdout));
-    ///
     /// ```
-    Convert {
-        /// From base64 to binary
-        #[arg(long)]
-        invert: bool,
-    },
+    ///
+    #[clap(verbatim_doc_comment)]
+    Base64ToBin,
 
-    /// Take PSBTs from stdin and for each print the net balance from the perspective of given
-    /// public descriptors
+    /// Gives details for each PSBTs given from stdin.
+    ///
+    /// For example the net balance considering the given descriptors.
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -266,6 +275,7 @@ pub enum Commands {
     /// assert_eq!(stdout.to_string().split("\n").skip(9).next().unwrap(), "net  :  -0.000114200");
     /// ```
     ///
+    #[clap(verbatim_doc_comment)]
     Details {
         /// The public descriptor (multipath) to calculate the net balance against.
         #[arg(long)]

@@ -62,8 +62,6 @@ mod test {
             encrypted.lines().last().unwrap()
         );
 
-        println!("{encrypted}");
-
         let decrypted = decrypt(&encrypted, &identity).unwrap();
 
         assert_eq!(data, decrypted);

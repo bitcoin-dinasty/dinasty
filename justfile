@@ -15,5 +15,6 @@ upgrade-bash-completion: build
 build-image:
   nix flake update github:bitcoin-dinasty/dinasty
   cd build-raspi4-image
+  # export TMPDIR=/mnt/nvme/tmp
   nix build .#image.rpi4
   cd -

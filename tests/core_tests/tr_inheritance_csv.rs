@@ -151,7 +151,6 @@ fn tr_inheritance() {
 
             if let Ok(_) = node.client.generate_to_address(100, &non_owned_address) {
                 remaining -= 100;
-                println!("{remaining}");
             } // make the CSV expire
         }
     }
@@ -159,7 +158,6 @@ fn tr_inheritance() {
     let result = heir_client
         .test_mempool_accept(&[psbt.hex.as_ref().unwrap()])
         .unwrap();
-    println!("{result:?}");
     assert!(result[0].allowed);
 
     heir_client

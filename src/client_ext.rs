@@ -89,12 +89,12 @@ impl ClientExt for Client {
         let val: Value = self
             .call("walletpassphrase", &[passphrase.into(), 10.into()])
             .unwrap();
-        println!("{val:?}");
+        eprintln!("{val:?}");
     }
 
     fn wallet_lock(&self) {
         let val: Value = self.call("walletlock", &[]).unwrap();
-        println!("{val:?}");
+        eprintln!("{val:?}");
     }
 
     fn create_blank_wallet(

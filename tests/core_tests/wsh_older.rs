@@ -39,7 +39,6 @@ fn wsh_older() {
         .unwrap()
         .assume_checked();
 
-    println!("{alice_address}");
     node.client.generate_to_address(1, &alice_address).unwrap();
     node.client.generate_to_address(100, &node_address).unwrap(); // enough to be spendable, not enought for CSV
 
@@ -80,7 +79,6 @@ fn wsh_older() {
 
             if let Ok(_) = node.client.generate_to_address(100, &non_owned_address) {
                 remaining -= 100;
-                println!("{remaining}");
             } // make the CSV expire
         }
     }

@@ -80,8 +80,7 @@ fn nlocktime() {
     let psbt = alice_wo_client
         .wallet_create_funded_psbt(&[input], &outputs, Some(locktime), Some(options), None)
         .unwrap();
-    let t = PartiallySignedTransaction::from_str(&psbt.psbt).unwrap();
-    println!("{:?}", &t);
+    let _ = PartiallySignedTransaction::from_str(&psbt.psbt).unwrap();
 
     assert_eq!(psbt.psbt.len(), 296);
 
@@ -90,8 +89,7 @@ fn nlocktime() {
         .unwrap();
     assert!(psbt.complete);
     assert_eq!(psbt.psbt.len(), 280);
-    let t = PartiallySignedTransaction::from_str(&psbt.psbt).unwrap();
-    println!("{:?}", &t);
+    let _ = PartiallySignedTransaction::from_str(&psbt.psbt).unwrap();
 
     let psbt = alice_client.finalize_psbt(&psbt.psbt, None).unwrap();
     assert_eq!(psbt.hex.as_ref().unwrap().len(), 150);

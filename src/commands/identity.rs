@@ -1,14 +1,10 @@
-use std::str::FromStr;
-
+use super::Seed;
 use age::x25519::Identity;
 use bitcoin::{
     bech32::{self, ToBase32, Variant},
     hashes::{sha256d, Hash},
 };
-
-use crate::IncompatibleNetwork;
-
-use super::Seed;
+use std::str::FromStr;
 
 const SECRET_KEY_PREFIX: &str = "age-secret-key-";
 
@@ -22,9 +18,6 @@ pub enum IdentityError {
 
     #[error("Identity parsing error {0}")]
     Identity(String),
-
-    #[error(transparent)]
-    IncompatibleNetwork(#[from] IncompatibleNetwork),
 }
 
 pub fn identity(seed: &Seed) -> Result<Identity, IdentityError> {
