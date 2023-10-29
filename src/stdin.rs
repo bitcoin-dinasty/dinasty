@@ -23,14 +23,11 @@ impl StdinData {
         Self(data)
     }
     pub fn to_single_text_line(self) -> Result<String, StdinError> {
-        let string = String::from_utf8(self.0)?;
-        let iter = string.split("\n");
-        let len = iter.count();
-        if len != 1 {
-            return Err(StdinError::Not1Lines(len));
+        let mut vec = self.to_multiline_string()?;
+        if vec.len() != 1 {
+            return Err(StdinError::Not1Lines(vec.len()));
         }
-        let first = string.split("\n").next().expect("length checked");
-        Ok(first.to_string())
+        Ok(vec.pop().expect("length checked"))
     }
     pub fn to_string(self) -> Result<String, StdinError> {
         Ok(String::from_utf8(self.0)?)
