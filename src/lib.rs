@@ -179,12 +179,12 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             generate(shell, &mut Cli::command(), "dinasty", &mut result);
             result
         }
-        Commands::Base64ToBin => {
+        Commands::B64ToBin => {
             let content = stdin.ok_or(Error::StdinExpected)?.to_multiline_string()?;
             let psbts: Result<Vec<_>, _> = content.iter().map(|e| e.parse()).collect();
             psbts_serde::serialize(&psbts?)
         }
-        Commands::BinToBase64 => {
+        Commands::BinToB64 => {
             let content = stdin.ok_or(Error::StdinExpected)?.to_vec();
             let psbts = psbts_serde::deserialize(&content)?;
             psbts

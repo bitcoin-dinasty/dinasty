@@ -63,7 +63,7 @@ pub enum Commands {
         codex32_id: Option<String>,
     },
 
-    /// Given an extended private key and if public or private prints the bip86 descriptor
+    /// Given a seed, an account, if public or private prints the bip86 descriptor
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -241,11 +241,11 @@ pub enum Commands {
     /// ```
     /// # use dinasty::test_util::*;
     /// let stdin = psbts_binary();
-    /// let stdout = sh(&stdin, "dinasty bin-to-base64");
+    /// let stdout = sh(&stdin, "dinasty bin-to-b64");
     /// ```
     ///
     #[clap(verbatim_doc_comment)]
-    BinToBase64,
+    BinToB64,
 
     /// Convert the base64 PSBTs given from stdin to binary PSBTs
     ///
@@ -253,14 +253,14 @@ pub enum Commands {
     /// # use dinasty::test_util::*;
     /// let psbts_binary = psbts_binary();
     /// let stdin = psbts_binary.clone();
-    /// let stdout = sh(&stdin, "dinasty bin-to-base64");
+    /// let stdout = sh(&stdin, "dinasty bin-to-b64");
     /// let stdin = stdout;
-    /// let stdout = sh(&stdin, "dinasty base64-to-bin").to_psbts().unwrap();
+    /// let stdout = sh(&stdin, "dinasty b64-to-bin").to_psbts().unwrap();
     /// assert_eq!(psbts_binary, dinasty::psbts_serde::serialize(&stdout));
     /// ```
     ///
     #[clap(verbatim_doc_comment)]
-    Base64ToBin,
+    B64ToBin,
 
     /// Gives details for each PSBTs given from stdin.
     ///

@@ -133,6 +133,8 @@ B) `cat - | encrypt >SEED` input MANUALLY the seed from machine A so that the se
 
 A,B) `decrypt SEED | dinasty descriptor --account 0 --public` ensure they are the same on A,B
 
+A,B) `chattr +i SEED` make the file not deleteable
+
 ### Descriptors creation
 
 A,B) `decrypt SEED | dinasty descriptor --account 0 | encrypt >OWNER_DESCRIPTOR_SECRET`  both machine could have signer wallet 
@@ -167,27 +169,29 @@ A,B) `bitcoin-cli getnewaddress first bech32m` ensure they are the same and equa
 
 
 
-
+### Setupe age
 
 
 A) `cat HEIR_DESCRIPTOR_SECRET | decrypt | encrypt_to_online | base32 | dinasty qr` bring to M
 
 
-A,B) `cat SEED | decrypt | dinasty identity --private | encrypt > AGE_IDENTITY`  write down on multiple sheets, give to trusted parties 
+A,B) `cat SEED | decrypt | dinasty identity --private | encrypt >AGE_IDENTITY`  write down on multiple sheets, give to trusted parties 
 
-A,B) `cat SEED | decrypt | dinasty identity  | encrypt age_public`
+A,B) `cat SEED | decrypt | dinasty identity  | encrypt >age_public`
 
 A,B) check age derive private to same public
 
 A,B) `alias encrypt_to_heir='age --encrypt -r $(cat heir_identity_public)'`
 
-## Heir descriptor (once)
+
+
+### Heir descriptor (once)
 
 A or B) `decrypt heir_descriptor | encrypt heir_identity | base32 | dinasty qr` bring to M
 
 M) scan QR in a text file "qrs". `cat qrs | tr -d '\n' | base 32 --decode > heir_descriptor_encrypted`
 
-## Locktime
+### Locktime
 
 To be done whenever UTXO in owner wallet are created, for example for a change in a spending or a refresh to eliminate near-to-expire locktimes.
 
