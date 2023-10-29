@@ -66,9 +66,7 @@ pub fn read_stdin() -> StdinData {
 impl Commands {
     pub fn needs_stdin(&self) -> bool {
         match self {
-            Commands::BinToBase64
-            | Commands::Base64ToBin
-            | Commands::Locktime { .. }
+            Commands::Locktime { .. }
             | Commands::Refresh { .. }
             | Commands::Encrypt { .. }
             | Commands::GenerateCompletion { .. } => false,

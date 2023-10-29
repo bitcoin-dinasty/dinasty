@@ -265,6 +265,8 @@ pub enum Commands {
     /// Gives details for each PSBTs given from stdin.
     ///
     /// For example the net balance considering the given descriptors.
+    /// An 'm' on a input or output line means the script_pubkey can be created by the descriptors.
+    /// An 's' on an input means there is a signature.
     ///
     /// ```
     /// # use dinasty::test_util::*;
@@ -279,7 +281,7 @@ pub enum Commands {
     Details {
         /// The public descriptor (multipath) to calculate the net balance against.
         #[arg(long)]
-        descriptor: Descriptor,
+        descriptor: Vec<Descriptor>,
     },
 
     /// Encrypt standard input for given recipients using the age protocol

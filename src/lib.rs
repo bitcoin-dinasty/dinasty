@@ -198,7 +198,7 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
         Commands::Details { descriptor } => {
             let psbts = stdin.ok_or(Error::StdinExpected)?.to_psbts()?;
 
-            let balances = commands::psbt_details(&psbts, descriptor, cli.network)?;
+            let balances = commands::psbt_details(&psbts, &descriptor, cli.network)?;
 
             balances.to_string().as_bytes().to_vec()
         }

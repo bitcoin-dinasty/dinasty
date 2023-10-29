@@ -52,8 +52,7 @@ pub fn deserialize(bytes: &[u8]) -> Result<Vec<PartiallySignedTransaction>, Deco
 
     let len = VarInt::consensus_decode(&mut bytes)?;
     let mut bytes_read = 0;
-    for i in 0..len.0 {
-        eprintln!("{i}");
+    for _ in 0..len.0 {
         let bytes = &bytes[bytes_read..];
 
         let psbt = PartiallySignedTransaction::deserialize(bytes)?;
