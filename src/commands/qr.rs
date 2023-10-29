@@ -1,4 +1,4 @@
-use qr_code::{structured::SplittedQr, QrCode};
+use qr_code::QrCode;
 
 /// Max bytes encodable in a structured append qr code, given Qr code version as array index
 const MAX_BYTES: [usize; 33] = [
@@ -11,39 +11,30 @@ pub fn qr(
     version: i16,
     border: u8,
     empty_lines: u8,
-    avoid_structured: bool,
+    label: Option<String>,
 ) -> Result<String, qr_code::types::QrError> {
     let mut result = String::new();
     let empty_lines = "\n".repeat(empty_lines as usize);
+    let label = label.as_deref().unwrap_or("");
 
-    if avoid_structured {
-        let valid_bech32 = bech32::decode_without_checksum(content).is_ok();
-        let mut max_chars = MAX_BYTES[version as usize];
-        if valid_bech32 && content.chars().all(|c| c.is_ascii_uppercase()) {
-            // in this case the Alphanumeric encoding save space
-            max_chars = max_chars + max_chars / 2;
-        }
-        let splitted_data = content
-            .chars()
-            .collect::<Vec<char>>()
-            .chunks(max_chars)
-            .map(|c| c.iter().collect::<String>())
-            .collect::<Vec<String>>();
-        let len = splitted_data.len();
-        for (i, data) in splitted_data.iter().enumerate() {
-            let qr = QrCode::new(data)?;
-            print_qr(i, &qr, border, &mut result, &empty_lines, len);
-        }
-    } else {
-        let splitted = SplittedQr::new(content.as_bytes().to_vec(), version)?;
-
-        let splitted = splitted.split()?;
-
-        let len = splitted.len();
-        for (i, qr) in splitted.iter().enumerate() {
-            print_qr(i, qr, border, &mut result, &empty_lines, len);
-        }
+    let valid_bech32 = bech32::decode_without_checksum(content).is_ok();
+    let mut max_chars = MAX_BYTES[version as usize];
+    if valid_bech32 && content.chars().all(|c| c.is_ascii_uppercase()) {
+        // in this case the Alphanumeric encoding save space
+        max_chars = max_chars + max_chars / 2;
     }
+    let splitted_data = content
+        .chars()
+        .collect::<Vec<char>>()
+        .chunks(max_chars)
+        .map(|c| c.iter().collect::<String>())
+        .collect::<Vec<String>>();
+    let len = splitted_data.len();
+    for (i, data) in splitted_data.iter().enumerate() {
+        let qr = QrCode::new(data)?;
+        print_qr(i, &qr, border, &mut result, &empty_lines, len, label);
+    }
+
     Ok(result)
 }
 
@@ -54,13 +45,15 @@ fn print_qr(
     result: &mut String,
     empty_lines: &String,
     len: usize,
+    label: &str,
 ) {
     let version = match qr.version() {
         qr_code::Version::Normal(x) => x,
         qr_code::Version::Micro(x) => -x,
     };
-    let number = format!("({}/{len}) v{:?}\n", i + 1, version);
-    let spaces = " ".repeat((qr.width() + border as usize * 2 - number.len()) / 2);
+    let number = format!("{} ({}/{len}) v{:?}\n", label, i + 1, version);
+    let qr_width_with_border = qr.width() + border as usize * 2;
+    let spaces = " ".repeat((qr_width_with_border.saturating_sub(number.len())) / 2);
 
     result.push_str(&spaces);
     result.push_str(&number);

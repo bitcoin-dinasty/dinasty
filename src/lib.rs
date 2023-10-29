@@ -162,11 +162,11 @@ pub fn inner_main(cli: Cli, stdin: Option<StdinData>) -> anyhow::Result<Vec<u8>>
             qr_version,
             border,
             empty_lines,
-            avoid_structured,
+            label,
         } => {
             let content = stdin.ok_or(Error::StdinExpected)?.to_string()?;
 
-            commands::qr(&content, qr_version, border, empty_lines, avoid_structured)?
+            commands::qr(&content, qr_version, border, empty_lines, label)?
                 .as_bytes()
                 .to_vec()
         }

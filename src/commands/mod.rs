@@ -345,10 +345,8 @@ pub enum Commands {
         #[arg(long, default_value_t = 6)]
         empty_lines: u8,
 
-        /// Avoid structured encoding, the standard way to split data into multiple QR codes.
-        /// Instead simply split the data so that it presumably fits the qr_version given
         #[arg(long)]
-        avoid_structured: bool,
+        label: Option<String>,
     },
 
     #[clap(hide = true)]
